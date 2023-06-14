@@ -1,0 +1,73 @@
+scalar Timestamp
+type UserHttp {
+	id: ID!
+	createdAt: Timestamp!
+	updatedAt: Timestamp!
+	email: String!
+	password: String!
+	role: Role!
+	firstname: String!
+	lastname: String!
+	middlename: String!
+	isActive: Boolean!
+	activationCode: Int!
+}
+
+enum Role {
+	Anonymous
+	Student
+	Parent
+	Teacher
+	UnitAdmin
+	SuperAdmin
+}
+
+input NewUser {
+	email: String!
+	password: String!
+	role: Int!
+	firstname: String!
+	lastname: String!
+	middlename: String!
+}
+
+input UpdateUser {
+	id: ID!
+	email: String!
+	firstname: String!
+	lastname: String!
+	middlename: String!
+}
+
+type NewUserResponse {
+	id: ID!
+	email: String!
+	role: Int!
+	firstname: String!
+	lastname: String!
+	middlename: String!
+}
+
+type UsersList {
+	users: [UserHttp!]!
+	countRows: Int!
+}
+
+type Response {
+	ok: Boolean!
+}
+
+type Mutation {
+	CreateUser(input: NewUser!): NewUserResponse! #	@hasRole(roles: [SuperAdmin, UnitAdmin])
+	UpdateUser(input: UpdateUser!): UserHttp! # @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
+	DeleteUser(id: ID!): Response! # @hasRole(roles: [SuperAdmin, UnitAdmin])
+	SetUserIsActive(id: ID!, isActive: Boolean!): Response! # @hasRole(roles: [SuperAdmin])
+}
+
+type Query {
+	GetUserByAccessToken: UserHttp!
+	GetUserById(id: ID!): UserHttp! #@hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
+	GetAllUsers(page: Int, pageSize: Int, active: Boolean!, roles: [Role!]!): UsersList! #@hasRole(roles: [SuperAdmin, UnitAdmin])
+}
+
+#directive  @hasRole(roles: [Role]) on FIELD_DEFINITION
