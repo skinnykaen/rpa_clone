@@ -2,9 +2,9 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"github.com/dgrijalva/jwt-go/v4"
 	"github.com/spf13/viper"
+	"log"
 	"net/http"
 	"rpa_clone/internal/consts"
 	"rpa_clone/internal/models"
@@ -12,10 +12,9 @@ import (
 	"strings"
 )
 
-func Auth(next http.Handler) http.Handler {
+func Auth(next http.Handler, errLogger *log.Logger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := w.Header().Get("Authorization")
-		fmt.Println(authHeader)
+		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
 			r = r.WithContext(context.WithValue(r.Context(), consts.KeyId, "0"))
 			r = r.WithContext(context.WithValue(r.Context(), consts.KeyRole, models.RoleAnonymous))
@@ -24,6 +23,7 @@ func Auth(next http.Handler) http.Handler {
 		}
 		headerParts := strings.Split(authHeader, " ")
 		if len(headerParts) != 2 {
+			errLogger.Printf("%s", "invalid authorization header format")
 			http.Error(w, "invalid authorization header format", http.StatusBadRequest)
 			return
 		}
@@ -32,38 +32,18 @@ func Auth(next http.Handler) http.Handler {
 				return []byte(viper.GetString("auth_access_signing_key")), nil
 			})
 		if err != nil {
+			errLogger.Printf("%s", err.Error())
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
-		claims, ok := data.Claims.(services.UserClaims)
+		claims, ok := data.Claims.(*services.UserClaims)
 		if !ok {
+			errLogger.Printf("%s", "token claims are not of type *StandardClaims")
 			http.Error(w, "token claims are not of type *StandardClaims", http.StatusUnauthorized)
 			return
 		}
-		r = r.WithContext(context.WithValue(r.Context(), "id", claims.Id))
-		r = r.WithContext(context.WithValue(r.Context(), "role", claims.Role))
+		r = r.WithContext(context.WithValue(r.Context(), consts.KeyId, claims.Id))
+		r = r.WithContext(context.WithValue(r.Context(), consts.KeyRole, claims.Role))
 		next.ServeHTTP(w, r)
 	})
-}
-
-//func HasRoleDirective() func(ctx context.Context, obj interface{}, next graphql.Resolver, roles []*models.Role) (interface{}, error) {
-//	//return func(ctx context.Context, obj interface{}, next graphql.Resolver, roles []*models.Role) (interface{}, error) {
-//	//	fmt.Println(ctx.Value(consts.KeyId))
-//	//	fmt.Println(ctx.Value(consts.KeyRole))
-//	//	return next(ctx)
-//	//}
-//}
-
-type middleware func(http.HandlerFunc) http.HandlerFunc
-
-func chainMiddleware(mw ...middleware) middleware {
-	return func(final http.HandlerFunc) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
-			last := final
-			for i := len(mw) - 1; i >= 0; i-- {
-				last = mw[i](last)
-			}
-			last(w, r)
-		}
-	}
 }

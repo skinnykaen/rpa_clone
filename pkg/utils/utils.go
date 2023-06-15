@@ -25,6 +25,7 @@ func SendEmail(subject, to, body string) (err error) {
 }
 
 func Hash(s string) (hash string) {
+	// TODO use bcrypt
 	pwd := sha1.New()
 	pwd.Write([]byte(s))
 	pwd.Write([]byte(viper.GetString("auth_hash_salt")))

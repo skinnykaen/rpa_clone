@@ -8,10 +8,78 @@ import (
 	"strconv"
 )
 
+type AbsoluteMediaHTTP struct {
+	ID          string `json:"id"`
+	URI         string `json:"uri"`
+	URIAbsolute string `json:"uri_absolute"`
+}
+
 type ConfirmActivation struct {
 	Email          string `json:"email"`
 	Password       string `json:"password"`
 	ActivationCode int    `json:"activationCode"`
+}
+
+type CourseAPIMediaCollectionHTTP struct {
+	ID          string             `json:"id"`
+	BannerImage *AbsoluteMediaHTTP `json:"banner_image,omitempty"`
+	CourseImage *MediaHTTP         `json:"course_image,omitempty"`
+	CourseVideo *MediaHTTP         `json:"course_video,omitempty"`
+	Image       *ImageHTTP         `json:"image,omitempty"`
+}
+
+type CourseHTTP struct {
+	ID               string                        `json:"id"`
+	BlocksURL        string                        `json:"blocks_url"`
+	Effort           string                        `json:"effort"`
+	EnrollmentStart  string                        `json:"enrollment_start"`
+	EnrollmentEnd    string                        `json:"enrollment_end"`
+	End              string                        `json:"end"`
+	Name             string                        `json:"name"`
+	Number           string                        `json:"number"`
+	Org              string                        `json:"org"`
+	ShortDescription string                        `json:"short_description"`
+	Start            string                        `json:"start"`
+	StartDisplay     string                        `json:"start_display"`
+	StartType        string                        `json:"start_type"`
+	Pacing           string                        `json:"pacing"`
+	MobileAvailable  bool                          `json:"mobile_available"`
+	Hidden           bool                          `json:"hidden"`
+	InvitationOnly   bool                          `json:"invitation_only"`
+	Overview         *string                       `json:"overview,omitempty"`
+	CourseID         string                        `json:"course_id"`
+	Media            *CourseAPIMediaCollectionHTTP `json:"media"`
+}
+
+type CoursesListHTTP struct {
+	Courses   []*CourseHTTP `json:"courses"`
+	CountRows int           `json:"countRows"`
+}
+
+type EnrollmentHTTP struct {
+	Created  string `json:"created"`
+	Mode     string `json:"mode"`
+	IsActive bool   `json:"isActive"`
+	User     string `json:"user"`
+	CourseID string `json:"course_id"`
+}
+
+type EnrollmentsListHTTP struct {
+	Next     string            `json:"next"`
+	Previous string            `json:"previous"`
+	Results  []*EnrollmentHTTP `json:"results,omitempty"`
+}
+
+type ImageHTTP struct {
+	ID    string `json:"id"`
+	Raw   string `json:"raw"`
+	Small string `json:"small"`
+	Large string `json:"large"`
+}
+
+type MediaHTTP struct {
+	ID  string `json:"id"`
+	URI string `json:"uri"`
 }
 
 type NewUser struct {
@@ -30,6 +98,13 @@ type NewUserResponse struct {
 	Firstname  string `json:"firstname"`
 	Lastname   string `json:"lastname"`
 	Middlename string `json:"middlename"`
+}
+
+type Pagination struct {
+	Next     string `json:"next"`
+	Previous string `json:"previous"`
+	Count    int    `json:"count"`
+	NumPages int    `json:"num_pages"`
 }
 
 type Response struct {
