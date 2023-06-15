@@ -58,16 +58,16 @@ type Response {
 }
 
 type Mutation {
-	CreateUser(input: NewUser!): NewUserResponse! #	@hasRole(roles: [SuperAdmin, UnitAdmin])
-	UpdateUser(input: UpdateUser!): UserHttp! # @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
-	DeleteUser(id: ID!): Response! # @hasRole(roles: [SuperAdmin, UnitAdmin])
-	SetUserIsActive(id: ID!, isActive: Boolean!): Response! # @hasRole(roles: [SuperAdmin])
+	CreateUser(input: NewUser!): NewUserResponse! @hasRole(roles: [SuperAdmin, UnitAdmin])
+	UpdateUser(input: UpdateUser!): UserHttp! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
+	DeleteUser(id: ID!): Response! @hasRole(roles: [SuperAdmin, UnitAdmin])
+	SetUserIsActive(id: ID!, isActive: Boolean!): Response! @hasRole(roles: [SuperAdmin])
 }
 
 type Query {
 	GetUserByAccessToken: UserHttp!
-	GetUserById(id: ID!): UserHttp! #@hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
-	GetAllUsers(page: Int, pageSize: Int, active: Boolean!, roles: [Role!]!): UsersList! #@hasRole(roles: [SuperAdmin, UnitAdmin])
+	GetUserById(id: ID!): UserHttp! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
+	GetAllUsers(page: Int, pageSize: Int, active: Boolean!, roles: [Role!]!): UsersList! @hasRole(roles: [SuperAdmin, UnitAdmin])
 }
 
-#directive  @hasRole(roles: [Role]) on FIELD_DEFINITION
+directive  @hasRole(roles: [Role]) on FIELD_DEFINITION

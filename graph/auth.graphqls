@@ -27,6 +27,6 @@ extend type Mutation  {
 	SignUp(input: SignUp!): Response!
 	SignIn(input: SignIn!): SignInResponse!
 	SignOut: Response!
-	RefreshToken(refreshToken: String!): SignInResponse! #@hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
+	RefreshToken(refreshToken: String!): SignInResponse! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
 	ConfirmActivation(input: ConfirmActivation): Response!
 }

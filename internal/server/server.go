@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"fmt"
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/spf13/viper"
@@ -9,6 +11,7 @@ import (
 	"net/http"
 	"rpa_clone/graph"
 	"rpa_clone/internal/consts"
+	"rpa_clone/internal/models"
 	resolvers "rpa_clone/internal/transports/graphql"
 	"rpa_clone/pkg/logger"
 )
@@ -24,20 +27,22 @@ func NewServer(
 			OnStart: func(ctx context.Context) (err error) {
 				port := viper.GetString("graphql_server_port")
 				c := graph.Config{Resolvers: &resolver}
+				mux := http.NewServeMux()
 				//c.Directives.HasRole = HasRoleDirective()
-				//c.Directives.HasRole = func(ctx context.Context, obj interface{}, next graphql.Resolver, roles []*models.Role) (res interface{}, err error) {
-				//	fmt.Println(ctx.Value(consts.KeyId))
-				//	fmt.Println(ctx.Value(consts.KeyRole))
-				//	return next(ctx)
-				//}
+				c.Directives.HasRole = func(ctx context.Context, obj interface{}, next graphql.Resolver, roles []*models.Role) (res interface{}, err error) {
+					fmt.Println(ctx.Value(consts.KeyId))
+					fmt.Println(ctx.Value(consts.KeyRole))
+					return next(ctx)
+				}
 				srv := handler.NewDefaultServer(graph.NewExecutableSchema(c))
+				mux.Handle("/query", Auth(srv))
 				switch m {
 				case consts.Production:
-					http.Handle("/query", Auth(srv))
+					http.Handle("/query", mux)
 					break
 				case consts.Development:
 					http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-					http.Handle("/query", Auth(srv))
+					http.Handle("/query", mux)
 					break
 				}
 				loggers.Info.Printf("Connect to %s:%s/ for GraphQL playground",

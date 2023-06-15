@@ -31,8 +31,7 @@ func (u UserGatewayImpl) GetUser(email, passwordHash string) (user models.UserCo
 }
 
 func (u UserGatewayImpl) SetIsActive(id uint, isActive bool) error {
-	//TODO implement me
-	panic("implement me")
+	return u.postgresClient.Db.Where(&models.UserCore{ID: id}).Update("is_active", isActive).Error
 }
 
 func (u UserGatewayImpl) DoesExistEmail(id uint, email string) (bool, error) {

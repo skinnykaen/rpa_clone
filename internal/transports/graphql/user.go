@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"rpa_clone/graph"
+	"rpa_clone/internal/consts"
 	"rpa_clone/internal/models"
 	"strconv"
 )
@@ -69,6 +70,8 @@ func (r *queryResolver) GetUserByAccessToken(ctx context.Context) (*models.UserH
 
 // GetUserByID is the resolver for the GetUserById field.
 func (r *queryResolver) GetUserByID(ctx context.Context, id string) (*models.UserHTTP, error) {
+	fmt.Println(ctx.Value(consts.KeyId))
+	fmt.Println(ctx.Value(consts.KeyRole))
 	atoi, err := strconv.Atoi(id)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
