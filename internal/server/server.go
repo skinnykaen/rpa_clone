@@ -8,6 +8,7 @@ import (
 	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/graphql/directives"
 	resolvers "github.com/skinnykaen/rpa_clone/internal/transports/graphql"
+	http2 "github.com/skinnykaen/rpa_clone/internal/transports/http"
 	"github.com/skinnykaen/rpa_clone/pkg/logger"
 	"github.com/spf13/viper"
 	"go.uber.org/fx"
@@ -19,6 +20,7 @@ func NewServer(
 	lifecycle fx.Lifecycle,
 	loggers logger.Loggers,
 	resolver resolvers.Resolver,
+	hanlers http2.Handlers,
 ) {
 	lifecycle.Append(
 		fx.Hook{
@@ -26,14 +28,16 @@ func NewServer(
 				port := viper.GetString("graphql_server_port")
 				c := graph.Config{Resolvers: &resolver}
 				c.Directives.HasRole = directives.HasRole(loggers.Err)
+				mux := http.NewServeMux()
 				srv := handler.NewDefaultServer(graph.NewExecutableSchema(c))
 				switch m {
 				case consts.Production:
-					http.Handle("/query", Auth(srv, loggers.Err))
+					mux.Handle("/query", Auth(srv, loggers.Err))
 					break
 				case consts.Development:
-					http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-					http.Handle("/query", Auth(srv, loggers.Err))
+					mux.Handle("/", playground.Handler("GraphQL playground", "/query"))
+					mux.Handle("/query", Auth(srv, loggers.Err))
+					mux.Handle("/project", Auth(hanlers.ProjectHandler, loggers.Err))
 					break
 				}
 				loggers.Info.Printf("Connect to %s:%s/ for GraphQL playground",
@@ -41,7 +45,7 @@ func NewServer(
 					port,
 				)
 				go func() {
-					loggers.Err.Fatal(http.ListenAndServe(":"+port, nil))
+					loggers.Err.Fatal(http.ListenAndServe(":"+port, mux))
 				}()
 				return
 			},

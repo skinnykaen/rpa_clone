@@ -4,7 +4,6 @@ import (
 	"errors"
 	"github.com/skinnykaen/rpa_clone/internal/gateways"
 	"github.com/skinnykaen/rpa_clone/internal/models"
-	"github.com/skinnykaen/rpa_clone/pkg/logger"
 	"github.com/skinnykaen/rpa_clone/pkg/utils"
 )
 
@@ -18,7 +17,6 @@ type UserService interface {
 }
 
 type UserServiceImpl struct {
-	loggers     logger.Loggers
 	userGateway gateways.UserGateway
 }
 
