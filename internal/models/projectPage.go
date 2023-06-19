@@ -14,7 +14,7 @@ type ProjectPageCore struct {
 	AuthorID      uint
 	User          UserCore `gorm:"foreignKey:AuthorID"`
 	ProjectID     uint
-	Project       ProjectCore `gorm:"foreignKey:ProjectID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	Project       ProjectCore `gorm:"foreignKey:ProjectID"`
 	Title         string      `gorm:"size:256;not null"`
 	Instruction   string      `gorm:"size:256;not null"`
 	Notes         string      `gorm:"size:256;not null"`

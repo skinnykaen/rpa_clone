@@ -31,7 +31,7 @@ func (p ProjectGatewayImpl) CreateProject(project models.ProjectCore) (models.Pr
 }
 
 func (p ProjectGatewayImpl) DeleteProject(id, clientId uint) error {
-	result := p.postgresClient.Db.Where("author_id = ?", clientId).Delete(&models.ProjectCore{ID: id})
+	result := p.postgresClient.Db.Unscoped().Where("author_id = ?", clientId).Delete(&models.ProjectCore{ID: id})
 	var countRows int
 	result.Row().Scan(&countRows)
 	fmt.Println(countRows)

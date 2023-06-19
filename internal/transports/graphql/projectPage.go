@@ -45,7 +45,19 @@ func (r *mutationResolver) DeleteProjectPage(ctx context.Context, id string) (*m
 
 // GetProjectPageByID is the resolver for the GetProjectPageById field.
 func (r *queryResolver) GetProjectPageByID(ctx context.Context, id string) (*models.ProjectPageHTTP, error) {
-	panic(fmt.Errorf("not implemented: GetProjectPageByID - GetProjectPageById"))
+	atoi, err := strconv.Atoi(id)
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, err
+	}
+	project, err := r.projectPageService.GetProjectPageById(uint(atoi), ctx.Value(consts.KeyId).(uint))
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, err
+	}
+	projectPageHttp := models.ProjectPageHTTP{}
+	projectPageHttp.FromCore(project)
+	return &projectPageHttp, nil
 }
 
 // GetAllProjectPagesByAuthorID is the resolver for the GetAllProjectPagesByAuthorId field.

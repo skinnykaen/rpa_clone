@@ -38,7 +38,7 @@ func InitPostgresClient(loggers logger.Loggers) (postgresClient PostgresClient, 
 		InfoLogger: loggers.Info,
 	}
 	if migrateErr := postgresClient.Migrate(); migrateErr != nil {
-		loggers.Err.Fatalf("Failed tomigrate: %s", migrateErr.Error())
+		loggers.Err.Fatalf("Failed to migrate: %s", migrateErr.Error())
 	}
 	return
 }
@@ -46,9 +46,9 @@ func InitPostgresClient(loggers logger.Loggers) (postgresClient PostgresClient, 
 func (c *PostgresClient) Migrate() (err error) {
 	err = c.Db.AutoMigrate(
 		&models.UserCore{},
-		&models.ParentRelCore{},
-		&models.ProjectCore{},
 		&models.ProjectPageCore{},
+		&models.ProjectCore{},
+		&models.ParentRelCore{},
 	)
 	return
 }
