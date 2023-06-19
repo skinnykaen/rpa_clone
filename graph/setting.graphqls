@@ -1,0 +1,3 @@
+extend type Mutation {
+	SetActivationByCode(activationByCode: Boolean!): Response! @hasRole(roles: [SuperAdmin])
+}

@@ -1,9 +1,9 @@
 package gateways
 
 import (
+	"github.com/skinnykaen/rpa_clone/internal/db"
+	"github.com/skinnykaen/rpa_clone/internal/models"
 	"gorm.io/gorm/clause"
-	"rpa_clone/internal/db"
-	"rpa_clone/internal/models"
 )
 
 //TODO maybe return []student or []parent а не rels

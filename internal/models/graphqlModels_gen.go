@@ -89,6 +89,7 @@ type NewUser struct {
 	Firstname  string `json:"firstname"`
 	Lastname   string `json:"lastname"`
 	Middlename string `json:"middlename"`
+	Nickname   string `json:"nickname"`
 }
 
 type NewUserResponse struct {
@@ -105,6 +106,25 @@ type Pagination struct {
 	Previous string `json:"previous"`
 	Count    int    `json:"count"`
 	NumPages int    `json:"num_pages"`
+}
+
+type ProjectPageHTTP struct {
+	ID               string `json:"id"`
+	CreatedAt        string `json:"createdAt"`
+	UpdatedAt        string `json:"updatedAt"`
+	AuthorID         string `json:"authorId"`
+	ProjectID        string `json:"projectId"`
+	ProjectUpdatedAt string `json:"projectUpdatedAt"`
+	Title            string `json:"title"`
+	Instruction      string `json:"instruction"`
+	Notes            string `json:"notes"`
+	LinkToScratch    string `json:"linkToScratch"`
+	IsShared         bool   `json:"isShared"`
+}
+
+type ProjectPageHTTPList struct {
+	ProjectPages []*ProjectPageHTTP `json:"projectPages"`
+	CountRows    int                `json:"countRows"`
 }
 
 type Response struct {
@@ -130,12 +150,21 @@ type SignUp struct {
 	Middlename string `json:"middlename"`
 }
 
+type UpdateProjectPage struct {
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Instruction string `json:"instruction"`
+	Notes       string `json:"notes"`
+	IsShared    bool   `json:"isShared"`
+}
+
 type UpdateUser struct {
 	ID         string `json:"id"`
 	Email      string `json:"email"`
 	Firstname  string `json:"firstname"`
 	Lastname   string `json:"lastname"`
 	Middlename string `json:"middlename"`
+	Nickname   string `json:"nickname"`
 }
 
 type UserHTTP struct {
@@ -148,6 +177,7 @@ type UserHTTP struct {
 	Firstname      string `json:"firstname"`
 	Lastname       string `json:"lastname"`
 	Middlename     string `json:"middlename"`
+	Nickname       string `json:"nickname"`
 	IsActive       bool   `json:"isActive"`
 	ActivationCode int    `json:"activationCode"`
 }

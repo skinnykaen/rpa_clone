@@ -8,13 +8,13 @@ import (
 	"embed"
 	"errors"
 	"fmt"
-	"rpa_clone/internal/models"
 	"strconv"
 	"sync"
 	"sync/atomic"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
+	"github.com/skinnykaen/rpa_clone/internal/models"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
 )
@@ -117,14 +117,17 @@ type ComplexityRoot struct {
 	Mutation struct {
 		ConfirmActivation func(childComplexity int, input *models.ConfirmActivation) int
 		CreateParentRel   func(childComplexity int, parentID string, childID string) int
+		CreateProjectPage func(childComplexity int) int
 		CreateUser        func(childComplexity int, input models.NewUser) int
 		DeleteParentRel   func(childComplexity int, parentID string, childID string) int
+		DeleteProjectPage func(childComplexity int, id string) int
 		DeleteUser        func(childComplexity int, id string) int
 		RefreshToken      func(childComplexity int, refreshToken string) int
 		SetUserIsActive   func(childComplexity int, id string, isActive bool) int
 		SignIn            func(childComplexity int, input models.SignIn) int
 		SignOut           func(childComplexity int) int
 		SignUp            func(childComplexity int, input models.SignUp) int
+		UpdateProjectPage func(childComplexity int, input models.UpdateProjectPage) int
 		UpdateUser        func(childComplexity int, input models.UpdateUser) int
 	}
 
@@ -144,16 +147,38 @@ type ComplexityRoot struct {
 		Previous func(childComplexity int) int
 	}
 
+	ProjectPageHttp struct {
+		AuthorID         func(childComplexity int) int
+		CreatedAt        func(childComplexity int) int
+		ID               func(childComplexity int) int
+		Instruction      func(childComplexity int) int
+		IsShared         func(childComplexity int) int
+		LinkToScratch    func(childComplexity int) int
+		Notes            func(childComplexity int) int
+		ProjectID        func(childComplexity int) int
+		ProjectUpdatedAt func(childComplexity int) int
+		Title            func(childComplexity int) int
+		UpdatedAt        func(childComplexity int) int
+	}
+
+	ProjectPageHttpList struct {
+		CountRows    func(childComplexity int) int
+		ProjectPages func(childComplexity int) int
+	}
+
 	Query struct {
-		GetAllPublicCourses  func(childComplexity int, pageNumber string) int
-		GetAllUsers          func(childComplexity int, page *int, pageSize *int, active bool, roles []models.Role) int
-		GetChildrenByParent  func(childComplexity int, parentID string) int
-		GetCourseContent     func(childComplexity int, courseID string) int
-		GetCoursesByUser     func(childComplexity int) int
-		GetEnrollments       func(childComplexity int, username string) int
-		GetParentsByChild    func(childComplexity int, childID string) int
-		GetUserByAccessToken func(childComplexity int) int
-		GetUserByID          func(childComplexity int, id string) int
+		GetAllProjectPagesByAccessToken func(childComplexity int, page *int, pageSize *int) int
+		GetAllProjectPagesByAuthorID    func(childComplexity int, id *string, page *int, pageSize *int) int
+		GetAllPublicCourses             func(childComplexity int, pageNumber string) int
+		GetAllUsers                     func(childComplexity int, page *int, pageSize *int, active bool, roles []models.Role) int
+		GetChildrenByParent             func(childComplexity int, parentID string) int
+		GetCourseContent                func(childComplexity int, courseID string) int
+		GetCoursesByUser                func(childComplexity int) int
+		GetEnrollments                  func(childComplexity int, username string) int
+		GetParentsByChild               func(childComplexity int, childID string) int
+		GetProjectPageByID              func(childComplexity int, id string) int
+		GetUserByAccessToken            func(childComplexity int) int
+		GetUserByID                     func(childComplexity int, id string) int
 	}
 
 	Response struct {
@@ -174,6 +199,7 @@ type ComplexityRoot struct {
 		IsActive       func(childComplexity int) int
 		Lastname       func(childComplexity int) int
 		Middlename     func(childComplexity int) int
+		Nickname       func(childComplexity int) int
 		Password       func(childComplexity int) int
 		Role           func(childComplexity int) int
 		UpdatedAt      func(childComplexity int) int
@@ -186,7 +212,7 @@ type ComplexityRoot struct {
 }
 
 type MutationResolver interface {
-	CreateUser(ctx context.Context, input models.NewUser) (*models.NewUserResponse, error)
+	CreateUser(ctx context.Context, input models.NewUser) (*models.UserHTTP, error)
 	UpdateUser(ctx context.Context, input models.UpdateUser) (*models.UserHTTP, error)
 	DeleteUser(ctx context.Context, id string) (*models.Response, error)
 	SetUserIsActive(ctx context.Context, id string, isActive bool) (*models.Response, error)
@@ -197,6 +223,9 @@ type MutationResolver interface {
 	ConfirmActivation(ctx context.Context, input *models.ConfirmActivation) (*models.Response, error)
 	CreateParentRel(ctx context.Context, parentID string, childID string) (*models.Response, error)
 	DeleteParentRel(ctx context.Context, parentID string, childID string) (*models.Response, error)
+	CreateProjectPage(ctx context.Context) (*models.ProjectPageHTTP, error)
+	UpdateProjectPage(ctx context.Context, input models.UpdateProjectPage) (*models.ProjectPageHTTP, error)
+	DeleteProjectPage(ctx context.Context, id string) (*models.Response, error)
 }
 type QueryResolver interface {
 	GetUserByAccessToken(ctx context.Context) (*models.UserHTTP, error)
@@ -208,6 +237,9 @@ type QueryResolver interface {
 	GetEnrollments(ctx context.Context, username string) (*models.EnrollmentsListHTTP, error)
 	GetChildrenByParent(ctx context.Context, parentID string) (*models.UsersList, error)
 	GetParentsByChild(ctx context.Context, childID string) (*models.UsersList, error)
+	GetProjectPageByID(ctx context.Context, id string) (*models.ProjectPageHTTP, error)
+	GetAllProjectPagesByAuthorID(ctx context.Context, id *string, page *int, pageSize *int) (*models.ProjectPageHTTPList, error)
+	GetAllProjectPagesByAccessToken(ctx context.Context, page *int, pageSize *int) (*models.ProjectPageHTTPList, error)
 }
 
 type executableSchema struct {
@@ -557,6 +589,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.CreateParentRel(childComplexity, args["parentId"].(string), args["childID"].(string)), true
 
+	case "Mutation.CreateProjectPage":
+		if e.complexity.Mutation.CreateProjectPage == nil {
+			break
+		}
+
+		return e.complexity.Mutation.CreateProjectPage(childComplexity), true
+
 	case "Mutation.CreateUser":
 		if e.complexity.Mutation.CreateUser == nil {
 			break
@@ -580,6 +619,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.DeleteParentRel(childComplexity, args["parentId"].(string), args["childID"].(string)), true
+
+	case "Mutation.DeleteProjectPage":
+		if e.complexity.Mutation.DeleteProjectPage == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_DeleteProjectPage_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteProjectPage(childComplexity, args["id"].(string)), true
 
 	case "Mutation.DeleteUser":
 		if e.complexity.Mutation.DeleteUser == nil {
@@ -647,6 +698,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.SignUp(childComplexity, args["input"].(models.SignUp)), true
+
+	case "Mutation.UpdateProjectPage":
+		if e.complexity.Mutation.UpdateProjectPage == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_UpdateProjectPage_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateProjectPage(childComplexity, args["input"].(models.UpdateProjectPage)), true
 
 	case "Mutation.UpdateUser":
 		if e.complexity.Mutation.UpdateUser == nil {
@@ -730,6 +793,121 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Pagination.Previous(childComplexity), true
 
+	case "ProjectPageHttp.authorId":
+		if e.complexity.ProjectPageHttp.AuthorID == nil {
+			break
+		}
+
+		return e.complexity.ProjectPageHttp.AuthorID(childComplexity), true
+
+	case "ProjectPageHttp.createdAt":
+		if e.complexity.ProjectPageHttp.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.ProjectPageHttp.CreatedAt(childComplexity), true
+
+	case "ProjectPageHttp.id":
+		if e.complexity.ProjectPageHttp.ID == nil {
+			break
+		}
+
+		return e.complexity.ProjectPageHttp.ID(childComplexity), true
+
+	case "ProjectPageHttp.instruction":
+		if e.complexity.ProjectPageHttp.Instruction == nil {
+			break
+		}
+
+		return e.complexity.ProjectPageHttp.Instruction(childComplexity), true
+
+	case "ProjectPageHttp.isShared":
+		if e.complexity.ProjectPageHttp.IsShared == nil {
+			break
+		}
+
+		return e.complexity.ProjectPageHttp.IsShared(childComplexity), true
+
+	case "ProjectPageHttp.linkToScratch":
+		if e.complexity.ProjectPageHttp.LinkToScratch == nil {
+			break
+		}
+
+		return e.complexity.ProjectPageHttp.LinkToScratch(childComplexity), true
+
+	case "ProjectPageHttp.notes":
+		if e.complexity.ProjectPageHttp.Notes == nil {
+			break
+		}
+
+		return e.complexity.ProjectPageHttp.Notes(childComplexity), true
+
+	case "ProjectPageHttp.projectId":
+		if e.complexity.ProjectPageHttp.ProjectID == nil {
+			break
+		}
+
+		return e.complexity.ProjectPageHttp.ProjectID(childComplexity), true
+
+	case "ProjectPageHttp.projectUpdatedAt":
+		if e.complexity.ProjectPageHttp.ProjectUpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.ProjectPageHttp.ProjectUpdatedAt(childComplexity), true
+
+	case "ProjectPageHttp.title":
+		if e.complexity.ProjectPageHttp.Title == nil {
+			break
+		}
+
+		return e.complexity.ProjectPageHttp.Title(childComplexity), true
+
+	case "ProjectPageHttp.updatedAt":
+		if e.complexity.ProjectPageHttp.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.ProjectPageHttp.UpdatedAt(childComplexity), true
+
+	case "ProjectPageHttpList.countRows":
+		if e.complexity.ProjectPageHttpList.CountRows == nil {
+			break
+		}
+
+		return e.complexity.ProjectPageHttpList.CountRows(childComplexity), true
+
+	case "ProjectPageHttpList.projectPages":
+		if e.complexity.ProjectPageHttpList.ProjectPages == nil {
+			break
+		}
+
+		return e.complexity.ProjectPageHttpList.ProjectPages(childComplexity), true
+
+	case "Query.GetAllProjectPagesByAccessToken":
+		if e.complexity.Query.GetAllProjectPagesByAccessToken == nil {
+			break
+		}
+
+		args, err := ec.field_Query_GetAllProjectPagesByAccessToken_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.GetAllProjectPagesByAccessToken(childComplexity, args["page"].(*int), args["pageSize"].(*int)), true
+
+	case "Query.GetAllProjectPagesByAuthorId":
+		if e.complexity.Query.GetAllProjectPagesByAuthorID == nil {
+			break
+		}
+
+		args, err := ec.field_Query_GetAllProjectPagesByAuthorId_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.GetAllProjectPagesByAuthorID(childComplexity, args["id"].(*string), args["page"].(*int), args["pageSize"].(*int)), true
+
 	case "Query.GetAllPublicCourses":
 		if e.complexity.Query.GetAllPublicCourses == nil {
 			break
@@ -808,6 +986,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.GetParentsByChild(childComplexity, args["childId"].(string)), true
+
+	case "Query.GetProjectPageById":
+		if e.complexity.Query.GetProjectPageByID == nil {
+			break
+		}
+
+		args, err := ec.field_Query_GetProjectPageById_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.GetProjectPageByID(childComplexity, args["id"].(string)), true
 
 	case "Query.GetUserByAccessToken":
 		if e.complexity.Query.GetUserByAccessToken == nil {
@@ -905,6 +1095,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.UserHttp.Middlename(childComplexity), true
 
+	case "UserHttp.nickname":
+		if e.complexity.UserHttp.Nickname == nil {
+			break
+		}
+
+		return e.complexity.UserHttp.Nickname(childComplexity), true
+
 	case "UserHttp.password":
 		if e.complexity.UserHttp.Password == nil {
 			break
@@ -952,6 +1149,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputNewUser,
 		ec.unmarshalInputSignIn,
 		ec.unmarshalInputSignUp,
+		ec.unmarshalInputUpdateProjectPage,
 		ec.unmarshalInputUpdateUser,
 	)
 	first := true
@@ -1049,7 +1247,7 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 	return introspection.WrapTypeFromDef(parsedSchema, parsedSchema.Types[name]), nil
 }
 
-//go:embed "auth.graphqls" "course.graphqls" "parentRel.graphqls" "user.graphqls"
+//go:embed "auth.graphqls" "course.graphqls" "parentRel.graphqls" "projectPage.graphqls" "user.graphqls"
 var sourcesFS embed.FS
 
 func sourceData(filename string) string {
@@ -1064,6 +1262,7 @@ var sources = []*ast.Source{
 	{Name: "auth.graphqls", Input: sourceData("auth.graphqls"), BuiltIn: false},
 	{Name: "course.graphqls", Input: sourceData("course.graphqls"), BuiltIn: false},
 	{Name: "parentRel.graphqls", Input: sourceData("parentRel.graphqls"), BuiltIn: false},
+	{Name: "projectPage.graphqls", Input: sourceData("projectPage.graphqls"), BuiltIn: false},
 	{Name: "user.graphqls", Input: sourceData("user.graphqls"), BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
@@ -1078,7 +1277,7 @@ func (ec *executionContext) dir_hasRole_args(ctx context.Context, rawArgs map[st
 	var arg0 []*models.Role
 	if tmp, ok := rawArgs["roles"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("roles"))
-		arg0, err = ec.unmarshalORole2ᚕᚖrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, tmp)
+		arg0, err = ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1093,7 +1292,7 @@ func (ec *executionContext) field_Mutation_ConfirmActivation_args(ctx context.Co
 	var arg0 *models.ConfirmActivation
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalOConfirmActivation2ᚖrpa_cloneᚋinternalᚋmodelsᚐConfirmActivation(ctx, tmp)
+		arg0, err = ec.unmarshalOConfirmActivation2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐConfirmActivation(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1132,7 +1331,7 @@ func (ec *executionContext) field_Mutation_CreateUser_args(ctx context.Context, 
 	var arg0 models.NewUser
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNNewUser2rpa_cloneᚋinternalᚋmodelsᚐNewUser(ctx, tmp)
+		arg0, err = ec.unmarshalNNewUser2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐNewUser(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1162,6 +1361,21 @@ func (ec *executionContext) field_Mutation_DeleteParentRel_args(ctx context.Cont
 		}
 	}
 	args["childID"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_DeleteProjectPage_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
 	return args, nil
 }
 
@@ -1225,7 +1439,7 @@ func (ec *executionContext) field_Mutation_SignIn_args(ctx context.Context, rawA
 	var arg0 models.SignIn
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNSignIn2rpa_cloneᚋinternalᚋmodelsᚐSignIn(ctx, tmp)
+		arg0, err = ec.unmarshalNSignIn2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐSignIn(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1240,7 +1454,22 @@ func (ec *executionContext) field_Mutation_SignUp_args(ctx context.Context, rawA
 	var arg0 models.SignUp
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNSignUp2rpa_cloneᚋinternalᚋmodelsᚐSignUp(ctx, tmp)
+		arg0, err = ec.unmarshalNSignUp2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐSignUp(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_UpdateProjectPage_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 models.UpdateProjectPage
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNUpdateProjectPage2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐUpdateProjectPage(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1255,12 +1484,69 @@ func (ec *executionContext) field_Mutation_UpdateUser_args(ctx context.Context, 
 	var arg0 models.UpdateUser
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNUpdateUser2rpa_cloneᚋinternalᚋmodelsᚐUpdateUser(ctx, tmp)
+		arg0, err = ec.unmarshalNUpdateUser2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐUpdateUser(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
 	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_GetAllProjectPagesByAccessToken_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *int
+	if tmp, ok := rawArgs["page"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("page"))
+		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["page"] = arg0
+	var arg1 *int
+	if tmp, ok := rawArgs["pageSize"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pageSize"))
+		arg1, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["pageSize"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_GetAllProjectPagesByAuthorId_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalOID2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	var arg1 *int
+	if tmp, ok := rawArgs["page"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("page"))
+		arg1, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["page"] = arg1
+	var arg2 *int
+	if tmp, ok := rawArgs["pageSize"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pageSize"))
+		arg2, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["pageSize"] = arg2
 	return args, nil
 }
 
@@ -1312,7 +1598,7 @@ func (ec *executionContext) field_Query_GetAllUsers_args(ctx context.Context, ra
 	var arg3 []models.Role
 	if tmp, ok := rawArgs["roles"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("roles"))
-		arg3, err = ec.unmarshalNRole2ᚕrpa_cloneᚋinternalᚋmodelsᚐRoleᚄ(ctx, tmp)
+		arg3, err = ec.unmarshalNRole2ᚕgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRoleᚄ(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1378,6 +1664,21 @@ func (ec *executionContext) field_Query_GetParentsByChild_args(ctx context.Conte
 		}
 	}
 	args["childId"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_GetProjectPageById_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
 	return args, nil
 }
 
@@ -1650,7 +1951,7 @@ func (ec *executionContext) _CourseAPIMediaCollectionHttp_banner_image(ctx conte
 	}
 	res := resTmp.(*models.AbsoluteMediaHTTP)
 	fc.Result = res
-	return ec.marshalOAbsoluteMediaHttp2ᚖrpa_cloneᚋinternalᚋmodelsᚐAbsoluteMediaHTTP(ctx, field.Selections, res)
+	return ec.marshalOAbsoluteMediaHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐAbsoluteMediaHTTP(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_CourseAPIMediaCollectionHttp_banner_image(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1699,7 +2000,7 @@ func (ec *executionContext) _CourseAPIMediaCollectionHttp_course_image(ctx conte
 	}
 	res := resTmp.(*models.MediaHTTP)
 	fc.Result = res
-	return ec.marshalOMediaHttp2ᚖrpa_cloneᚋinternalᚋmodelsᚐMediaHTTP(ctx, field.Selections, res)
+	return ec.marshalOMediaHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐMediaHTTP(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_CourseAPIMediaCollectionHttp_course_image(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1746,7 +2047,7 @@ func (ec *executionContext) _CourseAPIMediaCollectionHttp_course_video(ctx conte
 	}
 	res := resTmp.(*models.MediaHTTP)
 	fc.Result = res
-	return ec.marshalOMediaHttp2ᚖrpa_cloneᚋinternalᚋmodelsᚐMediaHTTP(ctx, field.Selections, res)
+	return ec.marshalOMediaHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐMediaHTTP(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_CourseAPIMediaCollectionHttp_course_video(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1793,7 +2094,7 @@ func (ec *executionContext) _CourseAPIMediaCollectionHttp_image(ctx context.Cont
 	}
 	res := resTmp.(*models.ImageHTTP)
 	fc.Result = res
-	return ec.marshalOImageHttp2ᚖrpa_cloneᚋinternalᚋmodelsᚐImageHTTP(ctx, field.Selections, res)
+	return ec.marshalOImageHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐImageHTTP(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_CourseAPIMediaCollectionHttp_image(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -2680,7 +2981,7 @@ func (ec *executionContext) _CourseHttp_media(ctx context.Context, field graphql
 	}
 	res := resTmp.(*models.CourseAPIMediaCollectionHTTP)
 	fc.Result = res
-	return ec.marshalNCourseAPIMediaCollectionHttp2ᚖrpa_cloneᚋinternalᚋmodelsᚐCourseAPIMediaCollectionHTTP(ctx, field.Selections, res)
+	return ec.marshalNCourseAPIMediaCollectionHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐCourseAPIMediaCollectionHTTP(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_CourseHttp_media(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -2736,7 +3037,7 @@ func (ec *executionContext) _CoursesListHttp_courses(ctx context.Context, field 
 	}
 	res := resTmp.([]*models.CourseHTTP)
 	fc.Result = res
-	return ec.marshalNCourseHttp2ᚕᚖrpa_cloneᚋinternalᚋmodelsᚐCourseHTTPᚄ(ctx, field.Selections, res)
+	return ec.marshalNCourseHttp2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐCourseHTTPᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_CoursesListHttp_courses(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3171,7 +3472,7 @@ func (ec *executionContext) _EnrollmentsListHttp_results(ctx context.Context, fi
 	}
 	res := resTmp.([]*models.EnrollmentHTTP)
 	fc.Result = res
-	return ec.marshalOEnrollmentHttp2ᚕᚖrpa_cloneᚋinternalᚋmodelsᚐEnrollmentHTTPᚄ(ctx, field.Selections, res)
+	return ec.marshalOEnrollmentHttp2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐEnrollmentHTTPᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_EnrollmentsListHttp_results(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3481,7 +3782,7 @@ func (ec *executionContext) _Mutation_CreateUser(ctx context.Context, field grap
 			return ec.resolvers.Mutation().CreateUser(rctx, fc.Args["input"].(models.NewUser))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			roles, err := ec.unmarshalORole2ᚕᚖrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "UnitAdmin"})
+			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "UnitAdmin"})
 			if err != nil {
 				return nil, err
 			}
@@ -3498,10 +3799,10 @@ func (ec *executionContext) _Mutation_CreateUser(ctx context.Context, field grap
 		if tmp == nil {
 			return nil, nil
 		}
-		if data, ok := tmp.(*models.NewUserResponse); ok {
+		if data, ok := tmp.(*models.UserHTTP); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *rpa_clone/internal/models.NewUserResponse`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/skinnykaen/rpa_clone/internal/models.UserHTTP`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3513,9 +3814,9 @@ func (ec *executionContext) _Mutation_CreateUser(ctx context.Context, field grap
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*models.NewUserResponse)
+	res := resTmp.(*models.UserHTTP)
 	fc.Result = res
-	return ec.marshalNNewUserResponse2ᚖrpa_cloneᚋinternalᚋmodelsᚐNewUserResponse(ctx, field.Selections, res)
+	return ec.marshalNUserHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐUserHTTP(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_CreateUser(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3527,19 +3828,31 @@ func (ec *executionContext) fieldContext_Mutation_CreateUser(ctx context.Context
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
-				return ec.fieldContext_NewUserResponse_id(ctx, field)
+				return ec.fieldContext_UserHttp_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_UserHttp_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_UserHttp_updatedAt(ctx, field)
 			case "email":
-				return ec.fieldContext_NewUserResponse_email(ctx, field)
+				return ec.fieldContext_UserHttp_email(ctx, field)
+			case "password":
+				return ec.fieldContext_UserHttp_password(ctx, field)
 			case "role":
-				return ec.fieldContext_NewUserResponse_role(ctx, field)
+				return ec.fieldContext_UserHttp_role(ctx, field)
 			case "firstname":
-				return ec.fieldContext_NewUserResponse_firstname(ctx, field)
+				return ec.fieldContext_UserHttp_firstname(ctx, field)
 			case "lastname":
-				return ec.fieldContext_NewUserResponse_lastname(ctx, field)
+				return ec.fieldContext_UserHttp_lastname(ctx, field)
 			case "middlename":
-				return ec.fieldContext_NewUserResponse_middlename(ctx, field)
+				return ec.fieldContext_UserHttp_middlename(ctx, field)
+			case "nickname":
+				return ec.fieldContext_UserHttp_nickname(ctx, field)
+			case "isActive":
+				return ec.fieldContext_UserHttp_isActive(ctx, field)
+			case "activationCode":
+				return ec.fieldContext_UserHttp_activationCode(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type NewUserResponse", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type UserHttp", field.Name)
 		},
 	}
 	defer func() {
@@ -3551,7 +3864,7 @@ func (ec *executionContext) fieldContext_Mutation_CreateUser(ctx context.Context
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_CreateUser_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
-		return
+		return fc, err
 	}
 	return fc, nil
 }
@@ -3574,7 +3887,7 @@ func (ec *executionContext) _Mutation_UpdateUser(ctx context.Context, field grap
 			return ec.resolvers.Mutation().UpdateUser(rctx, fc.Args["input"].(models.UpdateUser))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			roles, err := ec.unmarshalORole2ᚕᚖrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "UnitAdmin", "Teacher", "Parent", "Student"})
+			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "UnitAdmin", "Teacher", "Parent", "Student"})
 			if err != nil {
 				return nil, err
 			}
@@ -3594,7 +3907,7 @@ func (ec *executionContext) _Mutation_UpdateUser(ctx context.Context, field grap
 		if data, ok := tmp.(*models.UserHTTP); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *rpa_clone/internal/models.UserHTTP`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/skinnykaen/rpa_clone/internal/models.UserHTTP`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3608,7 +3921,7 @@ func (ec *executionContext) _Mutation_UpdateUser(ctx context.Context, field grap
 	}
 	res := resTmp.(*models.UserHTTP)
 	fc.Result = res
-	return ec.marshalNUserHttp2ᚖrpa_cloneᚋinternalᚋmodelsᚐUserHTTP(ctx, field.Selections, res)
+	return ec.marshalNUserHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐUserHTTP(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_UpdateUser(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3637,6 +3950,8 @@ func (ec *executionContext) fieldContext_Mutation_UpdateUser(ctx context.Context
 				return ec.fieldContext_UserHttp_lastname(ctx, field)
 			case "middlename":
 				return ec.fieldContext_UserHttp_middlename(ctx, field)
+			case "nickname":
+				return ec.fieldContext_UserHttp_nickname(ctx, field)
 			case "isActive":
 				return ec.fieldContext_UserHttp_isActive(ctx, field)
 			case "activationCode":
@@ -3654,7 +3969,7 @@ func (ec *executionContext) fieldContext_Mutation_UpdateUser(ctx context.Context
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_UpdateUser_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
-		return
+		return fc, err
 	}
 	return fc, nil
 }
@@ -3677,7 +3992,7 @@ func (ec *executionContext) _Mutation_DeleteUser(ctx context.Context, field grap
 			return ec.resolvers.Mutation().DeleteUser(rctx, fc.Args["id"].(string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			roles, err := ec.unmarshalORole2ᚕᚖrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "UnitAdmin"})
+			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "UnitAdmin"})
 			if err != nil {
 				return nil, err
 			}
@@ -3697,7 +4012,7 @@ func (ec *executionContext) _Mutation_DeleteUser(ctx context.Context, field grap
 		if data, ok := tmp.(*models.Response); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *rpa_clone/internal/models.Response`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/skinnykaen/rpa_clone/internal/models.Response`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3711,7 +4026,7 @@ func (ec *executionContext) _Mutation_DeleteUser(ctx context.Context, field grap
 	}
 	res := resTmp.(*models.Response)
 	fc.Result = res
-	return ec.marshalNResponse2ᚖrpa_cloneᚋinternalᚋmodelsᚐResponse(ctx, field.Selections, res)
+	return ec.marshalNResponse2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐResponse(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_DeleteUser(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3737,7 +4052,7 @@ func (ec *executionContext) fieldContext_Mutation_DeleteUser(ctx context.Context
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_DeleteUser_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
-		return
+		return fc, err
 	}
 	return fc, nil
 }
@@ -3760,7 +4075,7 @@ func (ec *executionContext) _Mutation_SetUserIsActive(ctx context.Context, field
 			return ec.resolvers.Mutation().SetUserIsActive(rctx, fc.Args["id"].(string), fc.Args["isActive"].(bool))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			roles, err := ec.unmarshalORole2ᚕᚖrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin"})
+			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "UnitAdmin"})
 			if err != nil {
 				return nil, err
 			}
@@ -3780,7 +4095,7 @@ func (ec *executionContext) _Mutation_SetUserIsActive(ctx context.Context, field
 		if data, ok := tmp.(*models.Response); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *rpa_clone/internal/models.Response`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/skinnykaen/rpa_clone/internal/models.Response`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3794,7 +4109,7 @@ func (ec *executionContext) _Mutation_SetUserIsActive(ctx context.Context, field
 	}
 	res := resTmp.(*models.Response)
 	fc.Result = res
-	return ec.marshalNResponse2ᚖrpa_cloneᚋinternalᚋmodelsᚐResponse(ctx, field.Selections, res)
+	return ec.marshalNResponse2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐResponse(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_SetUserIsActive(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3820,7 +4135,7 @@ func (ec *executionContext) fieldContext_Mutation_SetUserIsActive(ctx context.Co
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_SetUserIsActive_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
-		return
+		return fc, err
 	}
 	return fc, nil
 }
@@ -3853,7 +4168,7 @@ func (ec *executionContext) _Mutation_SignUp(ctx context.Context, field graphql.
 	}
 	res := resTmp.(*models.Response)
 	fc.Result = res
-	return ec.marshalNResponse2ᚖrpa_cloneᚋinternalᚋmodelsᚐResponse(ctx, field.Selections, res)
+	return ec.marshalNResponse2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐResponse(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_SignUp(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3879,7 +4194,7 @@ func (ec *executionContext) fieldContext_Mutation_SignUp(ctx context.Context, fi
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_SignUp_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
-		return
+		return fc, err
 	}
 	return fc, nil
 }
@@ -3912,7 +4227,7 @@ func (ec *executionContext) _Mutation_SignIn(ctx context.Context, field graphql.
 	}
 	res := resTmp.(*models.SignInResponse)
 	fc.Result = res
-	return ec.marshalNSignInResponse2ᚖrpa_cloneᚋinternalᚋmodelsᚐSignInResponse(ctx, field.Selections, res)
+	return ec.marshalNSignInResponse2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐSignInResponse(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_SignIn(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3940,7 +4255,7 @@ func (ec *executionContext) fieldContext_Mutation_SignIn(ctx context.Context, fi
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_SignIn_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
-		return
+		return fc, err
 	}
 	return fc, nil
 }
@@ -3973,7 +4288,7 @@ func (ec *executionContext) _Mutation_SignOut(ctx context.Context, field graphql
 	}
 	res := resTmp.(*models.Response)
 	fc.Result = res
-	return ec.marshalNResponse2ᚖrpa_cloneᚋinternalᚋmodelsᚐResponse(ctx, field.Selections, res)
+	return ec.marshalNResponse2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐResponse(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_SignOut(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4011,7 +4326,7 @@ func (ec *executionContext) _Mutation_RefreshToken(ctx context.Context, field gr
 			return ec.resolvers.Mutation().RefreshToken(rctx, fc.Args["refreshToken"].(string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			roles, err := ec.unmarshalORole2ᚕᚖrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "UnitAdmin", "Teacher", "Parent", "Student"})
+			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "UnitAdmin", "Teacher", "Parent", "Student"})
 			if err != nil {
 				return nil, err
 			}
@@ -4031,7 +4346,7 @@ func (ec *executionContext) _Mutation_RefreshToken(ctx context.Context, field gr
 		if data, ok := tmp.(*models.SignInResponse); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *rpa_clone/internal/models.SignInResponse`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/skinnykaen/rpa_clone/internal/models.SignInResponse`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4045,7 +4360,7 @@ func (ec *executionContext) _Mutation_RefreshToken(ctx context.Context, field gr
 	}
 	res := resTmp.(*models.SignInResponse)
 	fc.Result = res
-	return ec.marshalNSignInResponse2ᚖrpa_cloneᚋinternalᚋmodelsᚐSignInResponse(ctx, field.Selections, res)
+	return ec.marshalNSignInResponse2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐSignInResponse(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_RefreshToken(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4073,7 +4388,7 @@ func (ec *executionContext) fieldContext_Mutation_RefreshToken(ctx context.Conte
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_RefreshToken_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
-		return
+		return fc, err
 	}
 	return fc, nil
 }
@@ -4106,7 +4421,7 @@ func (ec *executionContext) _Mutation_ConfirmActivation(ctx context.Context, fie
 	}
 	res := resTmp.(*models.Response)
 	fc.Result = res
-	return ec.marshalNResponse2ᚖrpa_cloneᚋinternalᚋmodelsᚐResponse(ctx, field.Selections, res)
+	return ec.marshalNResponse2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐResponse(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_ConfirmActivation(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4132,7 +4447,7 @@ func (ec *executionContext) fieldContext_Mutation_ConfirmActivation(ctx context.
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_ConfirmActivation_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
-		return
+		return fc, err
 	}
 	return fc, nil
 }
@@ -4165,7 +4480,7 @@ func (ec *executionContext) _Mutation_CreateParentRel(ctx context.Context, field
 	}
 	res := resTmp.(*models.Response)
 	fc.Result = res
-	return ec.marshalNResponse2ᚖrpa_cloneᚋinternalᚋmodelsᚐResponse(ctx, field.Selections, res)
+	return ec.marshalNResponse2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐResponse(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_CreateParentRel(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4191,7 +4506,7 @@ func (ec *executionContext) fieldContext_Mutation_CreateParentRel(ctx context.Co
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_CreateParentRel_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
-		return
+		return fc, err
 	}
 	return fc, nil
 }
@@ -4224,7 +4539,7 @@ func (ec *executionContext) _Mutation_DeleteParentRel(ctx context.Context, field
 	}
 	res := resTmp.(*models.Response)
 	fc.Result = res
-	return ec.marshalNResponse2ᚖrpa_cloneᚋinternalᚋmodelsᚐResponse(ctx, field.Selections, res)
+	return ec.marshalNResponse2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐResponse(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_DeleteParentRel(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4250,7 +4565,285 @@ func (ec *executionContext) fieldContext_Mutation_DeleteParentRel(ctx context.Co
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_DeleteParentRel_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
-		return
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_CreateProjectPage(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_CreateProjectPage(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().CreateProjectPage(rctx)
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "UnitAdmin", "Student", "Teacher"})
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.HasRole == nil {
+				return nil, errors.New("directive hasRole is not implemented")
+			}
+			return ec.directives.HasRole(ctx, nil, directive0, roles)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*models.ProjectPageHTTP); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/skinnykaen/rpa_clone/internal/models.ProjectPageHTTP`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.ProjectPageHTTP)
+	fc.Result = res
+	return ec.marshalNProjectPageHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐProjectPageHTTP(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_CreateProjectPage(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_ProjectPageHttp_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_ProjectPageHttp_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_ProjectPageHttp_updatedAt(ctx, field)
+			case "authorId":
+				return ec.fieldContext_ProjectPageHttp_authorId(ctx, field)
+			case "projectId":
+				return ec.fieldContext_ProjectPageHttp_projectId(ctx, field)
+			case "projectUpdatedAt":
+				return ec.fieldContext_ProjectPageHttp_projectUpdatedAt(ctx, field)
+			case "title":
+				return ec.fieldContext_ProjectPageHttp_title(ctx, field)
+			case "instruction":
+				return ec.fieldContext_ProjectPageHttp_instruction(ctx, field)
+			case "notes":
+				return ec.fieldContext_ProjectPageHttp_notes(ctx, field)
+			case "linkToScratch":
+				return ec.fieldContext_ProjectPageHttp_linkToScratch(ctx, field)
+			case "isShared":
+				return ec.fieldContext_ProjectPageHttp_isShared(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ProjectPageHttp", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_UpdateProjectPage(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_UpdateProjectPage(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().UpdateProjectPage(rctx, fc.Args["input"].(models.UpdateProjectPage))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "UnitAdmin", "Student", "Teacher"})
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.HasRole == nil {
+				return nil, errors.New("directive hasRole is not implemented")
+			}
+			return ec.directives.HasRole(ctx, nil, directive0, roles)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*models.ProjectPageHTTP); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/skinnykaen/rpa_clone/internal/models.ProjectPageHTTP`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.ProjectPageHTTP)
+	fc.Result = res
+	return ec.marshalNProjectPageHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐProjectPageHTTP(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_UpdateProjectPage(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_ProjectPageHttp_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_ProjectPageHttp_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_ProjectPageHttp_updatedAt(ctx, field)
+			case "authorId":
+				return ec.fieldContext_ProjectPageHttp_authorId(ctx, field)
+			case "projectId":
+				return ec.fieldContext_ProjectPageHttp_projectId(ctx, field)
+			case "projectUpdatedAt":
+				return ec.fieldContext_ProjectPageHttp_projectUpdatedAt(ctx, field)
+			case "title":
+				return ec.fieldContext_ProjectPageHttp_title(ctx, field)
+			case "instruction":
+				return ec.fieldContext_ProjectPageHttp_instruction(ctx, field)
+			case "notes":
+				return ec.fieldContext_ProjectPageHttp_notes(ctx, field)
+			case "linkToScratch":
+				return ec.fieldContext_ProjectPageHttp_linkToScratch(ctx, field)
+			case "isShared":
+				return ec.fieldContext_ProjectPageHttp_isShared(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ProjectPageHttp", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_UpdateProjectPage_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_DeleteProjectPage(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_DeleteProjectPage(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().DeleteProjectPage(rctx, fc.Args["id"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "UnitAdmin", "Student", "Teacher"})
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.HasRole == nil {
+				return nil, errors.New("directive hasRole is not implemented")
+			}
+			return ec.directives.HasRole(ctx, nil, directive0, roles)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*models.Response); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/skinnykaen/rpa_clone/internal/models.Response`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.Response)
+	fc.Result = res
+	return ec.marshalNResponse2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐResponse(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_DeleteProjectPage(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "ok":
+				return ec.fieldContext_Response_ok(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Response", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_DeleteProjectPage_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -4695,6 +5288,602 @@ func (ec *executionContext) fieldContext_Pagination_num_pages(ctx context.Contex
 	return fc, nil
 }
 
+func (ec *executionContext) _ProjectPageHttp_id(ctx context.Context, field graphql.CollectedField, obj *models.ProjectPageHTTP) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ProjectPageHttp_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ProjectPageHttp_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProjectPageHttp",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ProjectPageHttp_createdAt(ctx context.Context, field graphql.CollectedField, obj *models.ProjectPageHTTP) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ProjectPageHttp_createdAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNTimestamp2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ProjectPageHttp_createdAt(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProjectPageHttp",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Timestamp does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ProjectPageHttp_updatedAt(ctx context.Context, field graphql.CollectedField, obj *models.ProjectPageHTTP) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ProjectPageHttp_updatedAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UpdatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNTimestamp2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ProjectPageHttp_updatedAt(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProjectPageHttp",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Timestamp does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ProjectPageHttp_authorId(ctx context.Context, field graphql.CollectedField, obj *models.ProjectPageHTTP) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ProjectPageHttp_authorId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AuthorID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ProjectPageHttp_authorId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProjectPageHttp",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ProjectPageHttp_projectId(ctx context.Context, field graphql.CollectedField, obj *models.ProjectPageHTTP) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ProjectPageHttp_projectId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ProjectID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ProjectPageHttp_projectId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProjectPageHttp",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ProjectPageHttp_projectUpdatedAt(ctx context.Context, field graphql.CollectedField, obj *models.ProjectPageHTTP) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ProjectPageHttp_projectUpdatedAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ProjectUpdatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNTimestamp2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ProjectPageHttp_projectUpdatedAt(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProjectPageHttp",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Timestamp does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ProjectPageHttp_title(ctx context.Context, field graphql.CollectedField, obj *models.ProjectPageHTTP) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ProjectPageHttp_title(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Title, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ProjectPageHttp_title(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProjectPageHttp",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ProjectPageHttp_instruction(ctx context.Context, field graphql.CollectedField, obj *models.ProjectPageHTTP) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ProjectPageHttp_instruction(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Instruction, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ProjectPageHttp_instruction(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProjectPageHttp",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ProjectPageHttp_notes(ctx context.Context, field graphql.CollectedField, obj *models.ProjectPageHTTP) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ProjectPageHttp_notes(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Notes, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ProjectPageHttp_notes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProjectPageHttp",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ProjectPageHttp_linkToScratch(ctx context.Context, field graphql.CollectedField, obj *models.ProjectPageHTTP) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ProjectPageHttp_linkToScratch(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LinkToScratch, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ProjectPageHttp_linkToScratch(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProjectPageHttp",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ProjectPageHttp_isShared(ctx context.Context, field graphql.CollectedField, obj *models.ProjectPageHTTP) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ProjectPageHttp_isShared(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IsShared, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ProjectPageHttp_isShared(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProjectPageHttp",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ProjectPageHttpList_projectPages(ctx context.Context, field graphql.CollectedField, obj *models.ProjectPageHTTPList) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ProjectPageHttpList_projectPages(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ProjectPages, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*models.ProjectPageHTTP)
+	fc.Result = res
+	return ec.marshalNProjectPageHttp2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐProjectPageHTTPᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ProjectPageHttpList_projectPages(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProjectPageHttpList",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_ProjectPageHttp_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_ProjectPageHttp_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_ProjectPageHttp_updatedAt(ctx, field)
+			case "authorId":
+				return ec.fieldContext_ProjectPageHttp_authorId(ctx, field)
+			case "projectId":
+				return ec.fieldContext_ProjectPageHttp_projectId(ctx, field)
+			case "projectUpdatedAt":
+				return ec.fieldContext_ProjectPageHttp_projectUpdatedAt(ctx, field)
+			case "title":
+				return ec.fieldContext_ProjectPageHttp_title(ctx, field)
+			case "instruction":
+				return ec.fieldContext_ProjectPageHttp_instruction(ctx, field)
+			case "notes":
+				return ec.fieldContext_ProjectPageHttp_notes(ctx, field)
+			case "linkToScratch":
+				return ec.fieldContext_ProjectPageHttp_linkToScratch(ctx, field)
+			case "isShared":
+				return ec.fieldContext_ProjectPageHttp_isShared(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ProjectPageHttp", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ProjectPageHttpList_countRows(ctx context.Context, field graphql.CollectedField, obj *models.ProjectPageHTTPList) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ProjectPageHttpList_countRows(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CountRows, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ProjectPageHttpList_countRows(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProjectPageHttpList",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_GetUserByAccessToken(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query_GetUserByAccessToken(ctx, field)
 	if err != nil {
@@ -4708,8 +5897,32 @@ func (ec *executionContext) _Query_GetUserByAccessToken(ctx context.Context, fie
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().GetUserByAccessToken(rctx)
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().GetUserByAccessToken(rctx)
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "UnitAdmin", "Teacher", "Parent", "Student"})
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.HasRole == nil {
+				return nil, errors.New("directive hasRole is not implemented")
+			}
+			return ec.directives.HasRole(ctx, nil, directive0, roles)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*models.UserHTTP); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/skinnykaen/rpa_clone/internal/models.UserHTTP`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4723,7 +5936,7 @@ func (ec *executionContext) _Query_GetUserByAccessToken(ctx context.Context, fie
 	}
 	res := resTmp.(*models.UserHTTP)
 	fc.Result = res
-	return ec.marshalNUserHttp2ᚖrpa_cloneᚋinternalᚋmodelsᚐUserHTTP(ctx, field.Selections, res)
+	return ec.marshalNUserHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐUserHTTP(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_GetUserByAccessToken(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4752,6 +5965,8 @@ func (ec *executionContext) fieldContext_Query_GetUserByAccessToken(ctx context.
 				return ec.fieldContext_UserHttp_lastname(ctx, field)
 			case "middlename":
 				return ec.fieldContext_UserHttp_middlename(ctx, field)
+			case "nickname":
+				return ec.fieldContext_UserHttp_nickname(ctx, field)
 			case "isActive":
 				return ec.fieldContext_UserHttp_isActive(ctx, field)
 			case "activationCode":
@@ -4781,7 +5996,7 @@ func (ec *executionContext) _Query_GetUserById(ctx context.Context, field graphq
 			return ec.resolvers.Query().GetUserByID(rctx, fc.Args["id"].(string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			roles, err := ec.unmarshalORole2ᚕᚖrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "UnitAdmin", "Teacher", "Parent", "Student"})
+			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "UnitAdmin", "Teacher", "Parent"})
 			if err != nil {
 				return nil, err
 			}
@@ -4801,7 +6016,7 @@ func (ec *executionContext) _Query_GetUserById(ctx context.Context, field graphq
 		if data, ok := tmp.(*models.UserHTTP); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *rpa_clone/internal/models.UserHTTP`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/skinnykaen/rpa_clone/internal/models.UserHTTP`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4815,7 +6030,7 @@ func (ec *executionContext) _Query_GetUserById(ctx context.Context, field graphq
 	}
 	res := resTmp.(*models.UserHTTP)
 	fc.Result = res
-	return ec.marshalNUserHttp2ᚖrpa_cloneᚋinternalᚋmodelsᚐUserHTTP(ctx, field.Selections, res)
+	return ec.marshalNUserHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐUserHTTP(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_GetUserById(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4844,6 +6059,8 @@ func (ec *executionContext) fieldContext_Query_GetUserById(ctx context.Context, 
 				return ec.fieldContext_UserHttp_lastname(ctx, field)
 			case "middlename":
 				return ec.fieldContext_UserHttp_middlename(ctx, field)
+			case "nickname":
+				return ec.fieldContext_UserHttp_nickname(ctx, field)
 			case "isActive":
 				return ec.fieldContext_UserHttp_isActive(ctx, field)
 			case "activationCode":
@@ -4861,7 +6078,7 @@ func (ec *executionContext) fieldContext_Query_GetUserById(ctx context.Context, 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_GetUserById_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
-		return
+		return fc, err
 	}
 	return fc, nil
 }
@@ -4884,7 +6101,7 @@ func (ec *executionContext) _Query_GetAllUsers(ctx context.Context, field graphq
 			return ec.resolvers.Query().GetAllUsers(rctx, fc.Args["page"].(*int), fc.Args["pageSize"].(*int), fc.Args["active"].(bool), fc.Args["roles"].([]models.Role))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			roles, err := ec.unmarshalORole2ᚕᚖrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "UnitAdmin"})
+			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "UnitAdmin"})
 			if err != nil {
 				return nil, err
 			}
@@ -4904,7 +6121,7 @@ func (ec *executionContext) _Query_GetAllUsers(ctx context.Context, field graphq
 		if data, ok := tmp.(*models.UsersList); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *rpa_clone/internal/models.UsersList`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/skinnykaen/rpa_clone/internal/models.UsersList`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4918,7 +6135,7 @@ func (ec *executionContext) _Query_GetAllUsers(ctx context.Context, field graphq
 	}
 	res := resTmp.(*models.UsersList)
 	fc.Result = res
-	return ec.marshalNUsersList2ᚖrpa_cloneᚋinternalᚋmodelsᚐUsersList(ctx, field.Selections, res)
+	return ec.marshalNUsersList2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐUsersList(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_GetAllUsers(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4946,7 +6163,7 @@ func (ec *executionContext) fieldContext_Query_GetAllUsers(ctx context.Context, 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_GetAllUsers_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
-		return
+		return fc, err
 	}
 	return fc, nil
 }
@@ -4979,7 +6196,7 @@ func (ec *executionContext) _Query_GetCourseContent(ctx context.Context, field g
 	}
 	res := resTmp.(*models.CourseHTTP)
 	fc.Result = res
-	return ec.marshalNCourseHttp2ᚖrpa_cloneᚋinternalᚋmodelsᚐCourseHTTP(ctx, field.Selections, res)
+	return ec.marshalNCourseHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐCourseHTTP(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_GetCourseContent(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -5043,7 +6260,7 @@ func (ec *executionContext) fieldContext_Query_GetCourseContent(ctx context.Cont
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_GetCourseContent_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
-		return
+		return fc, err
 	}
 	return fc, nil
 }
@@ -5076,7 +6293,7 @@ func (ec *executionContext) _Query_GetCoursesByUser(ctx context.Context, field g
 	}
 	res := resTmp.(*models.CoursesListHTTP)
 	fc.Result = res
-	return ec.marshalNCoursesListHttp2ᚖrpa_cloneᚋinternalᚋmodelsᚐCoursesListHTTP(ctx, field.Selections, res)
+	return ec.marshalNCoursesListHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐCoursesListHTTP(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_GetCoursesByUser(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -5126,7 +6343,7 @@ func (ec *executionContext) _Query_GetAllPublicCourses(ctx context.Context, fiel
 	}
 	res := resTmp.(*models.CoursesListHTTP)
 	fc.Result = res
-	return ec.marshalNCoursesListHttp2ᚖrpa_cloneᚋinternalᚋmodelsᚐCoursesListHTTP(ctx, field.Selections, res)
+	return ec.marshalNCoursesListHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐCoursesListHTTP(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_GetAllPublicCourses(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -5154,7 +6371,7 @@ func (ec *executionContext) fieldContext_Query_GetAllPublicCourses(ctx context.C
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_GetAllPublicCourses_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
-		return
+		return fc, err
 	}
 	return fc, nil
 }
@@ -5187,7 +6404,7 @@ func (ec *executionContext) _Query_GetEnrollments(ctx context.Context, field gra
 	}
 	res := resTmp.(*models.EnrollmentsListHTTP)
 	fc.Result = res
-	return ec.marshalNEnrollmentsListHttp2ᚖrpa_cloneᚋinternalᚋmodelsᚐEnrollmentsListHTTP(ctx, field.Selections, res)
+	return ec.marshalNEnrollmentsListHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐEnrollmentsListHTTP(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_GetEnrollments(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -5217,7 +6434,7 @@ func (ec *executionContext) fieldContext_Query_GetEnrollments(ctx context.Contex
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_GetEnrollments_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
-		return
+		return fc, err
 	}
 	return fc, nil
 }
@@ -5250,7 +6467,7 @@ func (ec *executionContext) _Query_GetChildrenByParent(ctx context.Context, fiel
 	}
 	res := resTmp.(*models.UsersList)
 	fc.Result = res
-	return ec.marshalNUsersList2ᚖrpa_cloneᚋinternalᚋmodelsᚐUsersList(ctx, field.Selections, res)
+	return ec.marshalNUsersList2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐUsersList(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_GetChildrenByParent(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -5278,7 +6495,7 @@ func (ec *executionContext) fieldContext_Query_GetChildrenByParent(ctx context.C
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_GetChildrenByParent_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
-		return
+		return fc, err
 	}
 	return fc, nil
 }
@@ -5311,7 +6528,7 @@ func (ec *executionContext) _Query_GetParentsByChild(ctx context.Context, field 
 	}
 	res := resTmp.(*models.UsersList)
 	fc.Result = res
-	return ec.marshalNUsersList2ᚖrpa_cloneᚋinternalᚋmodelsᚐUsersList(ctx, field.Selections, res)
+	return ec.marshalNUsersList2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐUsersList(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_GetParentsByChild(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -5339,7 +6556,280 @@ func (ec *executionContext) fieldContext_Query_GetParentsByChild(ctx context.Con
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_GetParentsByChild_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
-		return
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_GetProjectPageById(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_GetProjectPageById(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().GetProjectPageByID(rctx, fc.Args["id"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "UnitAdmin", "Student", "Teacher"})
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.HasRole == nil {
+				return nil, errors.New("directive hasRole is not implemented")
+			}
+			return ec.directives.HasRole(ctx, nil, directive0, roles)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*models.ProjectPageHTTP); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/skinnykaen/rpa_clone/internal/models.ProjectPageHTTP`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.ProjectPageHTTP)
+	fc.Result = res
+	return ec.marshalNProjectPageHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐProjectPageHTTP(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_GetProjectPageById(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_ProjectPageHttp_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_ProjectPageHttp_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_ProjectPageHttp_updatedAt(ctx, field)
+			case "authorId":
+				return ec.fieldContext_ProjectPageHttp_authorId(ctx, field)
+			case "projectId":
+				return ec.fieldContext_ProjectPageHttp_projectId(ctx, field)
+			case "projectUpdatedAt":
+				return ec.fieldContext_ProjectPageHttp_projectUpdatedAt(ctx, field)
+			case "title":
+				return ec.fieldContext_ProjectPageHttp_title(ctx, field)
+			case "instruction":
+				return ec.fieldContext_ProjectPageHttp_instruction(ctx, field)
+			case "notes":
+				return ec.fieldContext_ProjectPageHttp_notes(ctx, field)
+			case "linkToScratch":
+				return ec.fieldContext_ProjectPageHttp_linkToScratch(ctx, field)
+			case "isShared":
+				return ec.fieldContext_ProjectPageHttp_isShared(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ProjectPageHttp", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_GetProjectPageById_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_GetAllProjectPagesByAuthorId(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_GetAllProjectPagesByAuthorId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().GetAllProjectPagesByAuthorID(rctx, fc.Args["id"].(*string), fc.Args["page"].(*int), fc.Args["pageSize"].(*int))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "UnitAdmin", "Student", "Teacher"})
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.HasRole == nil {
+				return nil, errors.New("directive hasRole is not implemented")
+			}
+			return ec.directives.HasRole(ctx, nil, directive0, roles)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*models.ProjectPageHTTPList); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/skinnykaen/rpa_clone/internal/models.ProjectPageHTTPList`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.ProjectPageHTTPList)
+	fc.Result = res
+	return ec.marshalNProjectPageHttpList2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐProjectPageHTTPList(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_GetAllProjectPagesByAuthorId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "projectPages":
+				return ec.fieldContext_ProjectPageHttpList_projectPages(ctx, field)
+			case "countRows":
+				return ec.fieldContext_ProjectPageHttpList_countRows(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ProjectPageHttpList", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_GetAllProjectPagesByAuthorId_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_GetAllProjectPagesByAccessToken(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_GetAllProjectPagesByAccessToken(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().GetAllProjectPagesByAccessToken(rctx, fc.Args["page"].(*int), fc.Args["pageSize"].(*int))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "UnitAdmin", "Student", "Teacher"})
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.HasRole == nil {
+				return nil, errors.New("directive hasRole is not implemented")
+			}
+			return ec.directives.HasRole(ctx, nil, directive0, roles)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*models.ProjectPageHTTPList); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/skinnykaen/rpa_clone/internal/models.ProjectPageHTTPList`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.ProjectPageHTTPList)
+	fc.Result = res
+	return ec.marshalNProjectPageHttpList2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐProjectPageHTTPList(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_GetAllProjectPagesByAccessToken(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "projectPages":
+				return ec.fieldContext_ProjectPageHttpList_projectPages(ctx, field)
+			case "countRows":
+				return ec.fieldContext_ProjectPageHttpList_countRows(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ProjectPageHttpList", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_GetAllProjectPagesByAccessToken_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -5413,7 +6903,7 @@ func (ec *executionContext) fieldContext_Query___type(ctx context.Context, field
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query___type_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
-		return
+		return fc, err
 	}
 	return fc, nil
 }
@@ -5853,7 +7343,7 @@ func (ec *executionContext) _UserHttp_role(ctx context.Context, field graphql.Co
 	}
 	res := resTmp.(models.Role)
 	fc.Result = res
-	return ec.marshalNRole2rpa_cloneᚋinternalᚋmodelsᚐRole(ctx, field.Selections, res)
+	return ec.marshalNRole2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_UserHttp_role(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -6001,6 +7491,50 @@ func (ec *executionContext) fieldContext_UserHttp_middlename(ctx context.Context
 	return fc, nil
 }
 
+func (ec *executionContext) _UserHttp_nickname(ctx context.Context, field graphql.CollectedField, obj *models.UserHTTP) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserHttp_nickname(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Nickname, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_UserHttp_nickname(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UserHttp",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _UserHttp_isActive(ctx context.Context, field graphql.CollectedField, obj *models.UserHTTP) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_UserHttp_isActive(ctx, field)
 	if err != nil {
@@ -6117,7 +7651,7 @@ func (ec *executionContext) _UsersList_users(ctx context.Context, field graphql.
 	}
 	res := resTmp.([]*models.UserHTTP)
 	fc.Result = res
-	return ec.marshalNUserHttp2ᚕᚖrpa_cloneᚋinternalᚋmodelsᚐUserHTTPᚄ(ctx, field.Selections, res)
+	return ec.marshalNUserHttp2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐUserHTTPᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_UsersList_users(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -6146,6 +7680,8 @@ func (ec *executionContext) fieldContext_UsersList_users(ctx context.Context, fi
 				return ec.fieldContext_UserHttp_lastname(ctx, field)
 			case "middlename":
 				return ec.fieldContext_UserHttp_middlename(ctx, field)
+			case "nickname":
+				return ec.fieldContext_UserHttp_nickname(ctx, field)
 			case "isActive":
 				return ec.fieldContext_UserHttp_isActive(ctx, field)
 			case "activationCode":
@@ -7622,7 +9158,7 @@ func (ec *executionContext) fieldContext___Type_fields(ctx context.Context, fiel
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field___Type_fields_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
-		return
+		return fc, err
 	}
 	return fc, nil
 }
@@ -7810,7 +9346,7 @@ func (ec *executionContext) fieldContext___Type_enumValues(ctx context.Context, 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field___Type_enumValues_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
-		return
+		return fc, err
 	}
 	return fc, nil
 }
@@ -8028,7 +9564,7 @@ func (ec *executionContext) unmarshalInputNewUser(ctx context.Context, obj inter
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"email", "password", "role", "firstname", "lastname", "middlename"}
+	fieldsInOrder := [...]string{"email", "password", "role", "firstname", "lastname", "middlename", "nickname"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -8089,6 +9625,15 @@ func (ec *executionContext) unmarshalInputNewUser(ctx context.Context, obj inter
 				return it, err
 			}
 			it.Middlename = data
+		case "nickname":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nickname"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Nickname = data
 		}
 	}
 
@@ -8207,6 +9752,71 @@ func (ec *executionContext) unmarshalInputSignUp(ctx context.Context, obj interf
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputUpdateProjectPage(ctx context.Context, obj interface{}) (models.UpdateProjectPage, error) {
+	var it models.UpdateProjectPage
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"id", "title", "instruction", "notes", "isShared"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "id":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ID = data
+		case "title":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("title"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Title = data
+		case "instruction":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("instruction"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Instruction = data
+		case "notes":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("notes"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Notes = data
+		case "isShared":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("isShared"))
+			data, err := ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.IsShared = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputUpdateUser(ctx context.Context, obj interface{}) (models.UpdateUser, error) {
 	var it models.UpdateUser
 	asMap := map[string]interface{}{}
@@ -8214,7 +9824,7 @@ func (ec *executionContext) unmarshalInputUpdateUser(ctx context.Context, obj in
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"id", "email", "firstname", "lastname", "middlename"}
+	fieldsInOrder := [...]string{"id", "email", "firstname", "lastname", "middlename", "nickname"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -8266,6 +9876,15 @@ func (ec *executionContext) unmarshalInputUpdateUser(ctx context.Context, obj in
 				return it, err
 			}
 			it.Middlename = data
+		case "nickname":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nickname"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Nickname = data
 		}
 	}
 
@@ -8850,6 +10469,27 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "CreateProjectPage":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_CreateProjectPage(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "UpdateProjectPage":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_UpdateProjectPage(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "DeleteProjectPage":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_DeleteProjectPage(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -8965,6 +10605,139 @@ func (ec *executionContext) _Pagination(ctx context.Context, sel ast.SelectionSe
 			}
 		case "num_pages":
 			out.Values[i] = ec._Pagination_num_pages(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var projectPageHttpImplementors = []string{"ProjectPageHttp"}
+
+func (ec *executionContext) _ProjectPageHttp(ctx context.Context, sel ast.SelectionSet, obj *models.ProjectPageHTTP) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, projectPageHttpImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ProjectPageHttp")
+		case "id":
+			out.Values[i] = ec._ProjectPageHttp_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "createdAt":
+			out.Values[i] = ec._ProjectPageHttp_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updatedAt":
+			out.Values[i] = ec._ProjectPageHttp_updatedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "authorId":
+			out.Values[i] = ec._ProjectPageHttp_authorId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "projectId":
+			out.Values[i] = ec._ProjectPageHttp_projectId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "projectUpdatedAt":
+			out.Values[i] = ec._ProjectPageHttp_projectUpdatedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "title":
+			out.Values[i] = ec._ProjectPageHttp_title(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "instruction":
+			out.Values[i] = ec._ProjectPageHttp_instruction(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "notes":
+			out.Values[i] = ec._ProjectPageHttp_notes(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "linkToScratch":
+			out.Values[i] = ec._ProjectPageHttp_linkToScratch(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "isShared":
+			out.Values[i] = ec._ProjectPageHttp_isShared(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var projectPageHttpListImplementors = []string{"ProjectPageHttpList"}
+
+func (ec *executionContext) _ProjectPageHttpList(ctx context.Context, sel ast.SelectionSet, obj *models.ProjectPageHTTPList) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, projectPageHttpListImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ProjectPageHttpList")
+		case "projectPages":
+			out.Values[i] = ec._ProjectPageHttpList_projectPages(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "countRows":
+			out.Values[i] = ec._ProjectPageHttpList_countRows(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -9208,6 +10981,72 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "GetProjectPageById":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_GetProjectPageById(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "GetAllProjectPagesByAuthorId":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_GetAllProjectPagesByAuthorId(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "GetAllProjectPagesByAccessToken":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_GetAllProjectPagesByAccessToken(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "__type":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Query___type(ctx, field)
@@ -9375,6 +11214,11 @@ func (ec *executionContext) _UserHttp(ctx context.Context, sel ast.SelectionSet,
 			}
 		case "middlename":
 			out.Values[i] = ec._UserHttp_middlename(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "nickname":
+			out.Values[i] = ec._UserHttp_nickname(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -9796,7 +11640,7 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
-func (ec *executionContext) marshalNCourseAPIMediaCollectionHttp2ᚖrpa_cloneᚋinternalᚋmodelsᚐCourseAPIMediaCollectionHTTP(ctx context.Context, sel ast.SelectionSet, v *models.CourseAPIMediaCollectionHTTP) graphql.Marshaler {
+func (ec *executionContext) marshalNCourseAPIMediaCollectionHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐCourseAPIMediaCollectionHTTP(ctx context.Context, sel ast.SelectionSet, v *models.CourseAPIMediaCollectionHTTP) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -9806,11 +11650,11 @@ func (ec *executionContext) marshalNCourseAPIMediaCollectionHttp2ᚖrpa_cloneᚋ
 	return ec._CourseAPIMediaCollectionHttp(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNCourseHttp2rpa_cloneᚋinternalᚋmodelsᚐCourseHTTP(ctx context.Context, sel ast.SelectionSet, v models.CourseHTTP) graphql.Marshaler {
+func (ec *executionContext) marshalNCourseHttp2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐCourseHTTP(ctx context.Context, sel ast.SelectionSet, v models.CourseHTTP) graphql.Marshaler {
 	return ec._CourseHttp(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNCourseHttp2ᚕᚖrpa_cloneᚋinternalᚋmodelsᚐCourseHTTPᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.CourseHTTP) graphql.Marshaler {
+func (ec *executionContext) marshalNCourseHttp2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐCourseHTTPᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.CourseHTTP) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -9834,7 +11678,7 @@ func (ec *executionContext) marshalNCourseHttp2ᚕᚖrpa_cloneᚋinternalᚋmode
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNCourseHttp2ᚖrpa_cloneᚋinternalᚋmodelsᚐCourseHTTP(ctx, sel, v[i])
+			ret[i] = ec.marshalNCourseHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐCourseHTTP(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -9854,7 +11698,7 @@ func (ec *executionContext) marshalNCourseHttp2ᚕᚖrpa_cloneᚋinternalᚋmode
 	return ret
 }
 
-func (ec *executionContext) marshalNCourseHttp2ᚖrpa_cloneᚋinternalᚋmodelsᚐCourseHTTP(ctx context.Context, sel ast.SelectionSet, v *models.CourseHTTP) graphql.Marshaler {
+func (ec *executionContext) marshalNCourseHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐCourseHTTP(ctx context.Context, sel ast.SelectionSet, v *models.CourseHTTP) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -9864,11 +11708,11 @@ func (ec *executionContext) marshalNCourseHttp2ᚖrpa_cloneᚋinternalᚋmodels�
 	return ec._CourseHttp(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNCoursesListHttp2rpa_cloneᚋinternalᚋmodelsᚐCoursesListHTTP(ctx context.Context, sel ast.SelectionSet, v models.CoursesListHTTP) graphql.Marshaler {
+func (ec *executionContext) marshalNCoursesListHttp2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐCoursesListHTTP(ctx context.Context, sel ast.SelectionSet, v models.CoursesListHTTP) graphql.Marshaler {
 	return ec._CoursesListHttp(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNCoursesListHttp2ᚖrpa_cloneᚋinternalᚋmodelsᚐCoursesListHTTP(ctx context.Context, sel ast.SelectionSet, v *models.CoursesListHTTP) graphql.Marshaler {
+func (ec *executionContext) marshalNCoursesListHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐCoursesListHTTP(ctx context.Context, sel ast.SelectionSet, v *models.CoursesListHTTP) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -9878,7 +11722,7 @@ func (ec *executionContext) marshalNCoursesListHttp2ᚖrpa_cloneᚋinternalᚋmo
 	return ec._CoursesListHttp(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNEnrollmentHttp2ᚖrpa_cloneᚋinternalᚋmodelsᚐEnrollmentHTTP(ctx context.Context, sel ast.SelectionSet, v *models.EnrollmentHTTP) graphql.Marshaler {
+func (ec *executionContext) marshalNEnrollmentHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐEnrollmentHTTP(ctx context.Context, sel ast.SelectionSet, v *models.EnrollmentHTTP) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -9888,11 +11732,11 @@ func (ec *executionContext) marshalNEnrollmentHttp2ᚖrpa_cloneᚋinternalᚋmod
 	return ec._EnrollmentHttp(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNEnrollmentsListHttp2rpa_cloneᚋinternalᚋmodelsᚐEnrollmentsListHTTP(ctx context.Context, sel ast.SelectionSet, v models.EnrollmentsListHTTP) graphql.Marshaler {
+func (ec *executionContext) marshalNEnrollmentsListHttp2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐEnrollmentsListHTTP(ctx context.Context, sel ast.SelectionSet, v models.EnrollmentsListHTTP) graphql.Marshaler {
 	return ec._EnrollmentsListHttp(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNEnrollmentsListHttp2ᚖrpa_cloneᚋinternalᚋmodelsᚐEnrollmentsListHTTP(ctx context.Context, sel ast.SelectionSet, v *models.EnrollmentsListHTTP) graphql.Marshaler {
+func (ec *executionContext) marshalNEnrollmentsListHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐEnrollmentsListHTTP(ctx context.Context, sel ast.SelectionSet, v *models.EnrollmentsListHTTP) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -9932,67 +11776,16 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 	return res
 }
 
-func (ec *executionContext) unmarshalNNewUser2rpa_cloneᚋinternalᚋmodelsᚐNewUser(ctx context.Context, v interface{}) (models.NewUser, error) {
+func (ec *executionContext) unmarshalNNewUser2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐNewUser(ctx context.Context, v interface{}) (models.NewUser, error) {
 	res, err := ec.unmarshalInputNewUser(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNNewUserResponse2rpa_cloneᚋinternalᚋmodelsᚐNewUserResponse(ctx context.Context, sel ast.SelectionSet, v models.NewUserResponse) graphql.Marshaler {
-	return ec._NewUserResponse(ctx, sel, &v)
+func (ec *executionContext) marshalNProjectPageHttp2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐProjectPageHTTP(ctx context.Context, sel ast.SelectionSet, v models.ProjectPageHTTP) graphql.Marshaler {
+	return ec._ProjectPageHttp(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNNewUserResponse2ᚖrpa_cloneᚋinternalᚋmodelsᚐNewUserResponse(ctx context.Context, sel ast.SelectionSet, v *models.NewUserResponse) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._NewUserResponse(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalNResponse2rpa_cloneᚋinternalᚋmodelsᚐResponse(ctx context.Context, sel ast.SelectionSet, v models.Response) graphql.Marshaler {
-	return ec._Response(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNResponse2ᚖrpa_cloneᚋinternalᚋmodelsᚐResponse(ctx context.Context, sel ast.SelectionSet, v *models.Response) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._Response(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalNRole2rpa_cloneᚋinternalᚋmodelsᚐRole(ctx context.Context, v interface{}) (models.Role, error) {
-	var res models.Role
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNRole2rpa_cloneᚋinternalᚋmodelsᚐRole(ctx context.Context, sel ast.SelectionSet, v models.Role) graphql.Marshaler {
-	return v
-}
-
-func (ec *executionContext) unmarshalNRole2ᚕrpa_cloneᚋinternalᚋmodelsᚐRoleᚄ(ctx context.Context, v interface{}) ([]models.Role, error) {
-	var vSlice []interface{}
-	if v != nil {
-		vSlice = graphql.CoerceList(v)
-	}
-	var err error
-	res := make([]models.Role, len(vSlice))
-	for i := range vSlice {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNRole2rpa_cloneᚋinternalᚋmodelsᚐRole(ctx, vSlice[i])
-		if err != nil {
-			return nil, err
-		}
-	}
-	return res, nil
-}
-
-func (ec *executionContext) marshalNRole2ᚕrpa_cloneᚋinternalᚋmodelsᚐRoleᚄ(ctx context.Context, sel ast.SelectionSet, v []models.Role) graphql.Marshaler {
+func (ec *executionContext) marshalNProjectPageHttp2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐProjectPageHTTPᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.ProjectPageHTTP) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -10016,7 +11809,7 @@ func (ec *executionContext) marshalNRole2ᚕrpa_cloneᚋinternalᚋmodelsᚐRole
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNRole2rpa_cloneᚋinternalᚋmodelsᚐRole(ctx, sel, v[i])
+			ret[i] = ec.marshalNProjectPageHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐProjectPageHTTP(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -10036,16 +11829,125 @@ func (ec *executionContext) marshalNRole2ᚕrpa_cloneᚋinternalᚋmodelsᚐRole
 	return ret
 }
 
-func (ec *executionContext) unmarshalNSignIn2rpa_cloneᚋinternalᚋmodelsᚐSignIn(ctx context.Context, v interface{}) (models.SignIn, error) {
+func (ec *executionContext) marshalNProjectPageHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐProjectPageHTTP(ctx context.Context, sel ast.SelectionSet, v *models.ProjectPageHTTP) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ProjectPageHttp(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNProjectPageHttpList2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐProjectPageHTTPList(ctx context.Context, sel ast.SelectionSet, v models.ProjectPageHTTPList) graphql.Marshaler {
+	return ec._ProjectPageHttpList(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNProjectPageHttpList2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐProjectPageHTTPList(ctx context.Context, sel ast.SelectionSet, v *models.ProjectPageHTTPList) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ProjectPageHttpList(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNResponse2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐResponse(ctx context.Context, sel ast.SelectionSet, v models.Response) graphql.Marshaler {
+	return ec._Response(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNResponse2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐResponse(ctx context.Context, sel ast.SelectionSet, v *models.Response) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Response(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNRole2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx context.Context, v interface{}) (models.Role, error) {
+	var res models.Role
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNRole2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx context.Context, sel ast.SelectionSet, v models.Role) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNRole2ᚕgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRoleᚄ(ctx context.Context, v interface{}) ([]models.Role, error) {
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]models.Role, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNRole2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNRole2ᚕgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRoleᚄ(ctx context.Context, sel ast.SelectionSet, v []models.Role) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNRole2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalNSignIn2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐSignIn(ctx context.Context, v interface{}) (models.SignIn, error) {
 	res, err := ec.unmarshalInputSignIn(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNSignInResponse2rpa_cloneᚋinternalᚋmodelsᚐSignInResponse(ctx context.Context, sel ast.SelectionSet, v models.SignInResponse) graphql.Marshaler {
+func (ec *executionContext) marshalNSignInResponse2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐSignInResponse(ctx context.Context, sel ast.SelectionSet, v models.SignInResponse) graphql.Marshaler {
 	return ec._SignInResponse(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNSignInResponse2ᚖrpa_cloneᚋinternalᚋmodelsᚐSignInResponse(ctx context.Context, sel ast.SelectionSet, v *models.SignInResponse) graphql.Marshaler {
+func (ec *executionContext) marshalNSignInResponse2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐSignInResponse(ctx context.Context, sel ast.SelectionSet, v *models.SignInResponse) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -10055,7 +11957,7 @@ func (ec *executionContext) marshalNSignInResponse2ᚖrpa_cloneᚋinternalᚋmod
 	return ec._SignInResponse(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNSignUp2rpa_cloneᚋinternalᚋmodelsᚐSignUp(ctx context.Context, v interface{}) (models.SignUp, error) {
+func (ec *executionContext) unmarshalNSignUp2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐSignUp(ctx context.Context, v interface{}) (models.SignUp, error) {
 	res, err := ec.unmarshalInputSignUp(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
@@ -10090,16 +11992,21 @@ func (ec *executionContext) marshalNTimestamp2string(ctx context.Context, sel as
 	return res
 }
 
-func (ec *executionContext) unmarshalNUpdateUser2rpa_cloneᚋinternalᚋmodelsᚐUpdateUser(ctx context.Context, v interface{}) (models.UpdateUser, error) {
+func (ec *executionContext) unmarshalNUpdateProjectPage2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐUpdateProjectPage(ctx context.Context, v interface{}) (models.UpdateProjectPage, error) {
+	res, err := ec.unmarshalInputUpdateProjectPage(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNUpdateUser2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐUpdateUser(ctx context.Context, v interface{}) (models.UpdateUser, error) {
 	res, err := ec.unmarshalInputUpdateUser(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNUserHttp2rpa_cloneᚋinternalᚋmodelsᚐUserHTTP(ctx context.Context, sel ast.SelectionSet, v models.UserHTTP) graphql.Marshaler {
+func (ec *executionContext) marshalNUserHttp2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐUserHTTP(ctx context.Context, sel ast.SelectionSet, v models.UserHTTP) graphql.Marshaler {
 	return ec._UserHttp(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNUserHttp2ᚕᚖrpa_cloneᚋinternalᚋmodelsᚐUserHTTPᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.UserHTTP) graphql.Marshaler {
+func (ec *executionContext) marshalNUserHttp2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐUserHTTPᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.UserHTTP) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -10123,7 +12030,7 @@ func (ec *executionContext) marshalNUserHttp2ᚕᚖrpa_cloneᚋinternalᚋmodels
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNUserHttp2ᚖrpa_cloneᚋinternalᚋmodelsᚐUserHTTP(ctx, sel, v[i])
+			ret[i] = ec.marshalNUserHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐUserHTTP(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -10143,7 +12050,7 @@ func (ec *executionContext) marshalNUserHttp2ᚕᚖrpa_cloneᚋinternalᚋmodels
 	return ret
 }
 
-func (ec *executionContext) marshalNUserHttp2ᚖrpa_cloneᚋinternalᚋmodelsᚐUserHTTP(ctx context.Context, sel ast.SelectionSet, v *models.UserHTTP) graphql.Marshaler {
+func (ec *executionContext) marshalNUserHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐUserHTTP(ctx context.Context, sel ast.SelectionSet, v *models.UserHTTP) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -10153,11 +12060,11 @@ func (ec *executionContext) marshalNUserHttp2ᚖrpa_cloneᚋinternalᚋmodelsᚐ
 	return ec._UserHttp(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNUsersList2rpa_cloneᚋinternalᚋmodelsᚐUsersList(ctx context.Context, sel ast.SelectionSet, v models.UsersList) graphql.Marshaler {
+func (ec *executionContext) marshalNUsersList2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐUsersList(ctx context.Context, sel ast.SelectionSet, v models.UsersList) graphql.Marshaler {
 	return ec._UsersList(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNUsersList2ᚖrpa_cloneᚋinternalᚋmodelsᚐUsersList(ctx context.Context, sel ast.SelectionSet, v *models.UsersList) graphql.Marshaler {
+func (ec *executionContext) marshalNUsersList2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐUsersList(ctx context.Context, sel ast.SelectionSet, v *models.UsersList) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -10420,7 +12327,7 @@ func (ec *executionContext) marshalN__TypeKind2string(ctx context.Context, sel a
 	return res
 }
 
-func (ec *executionContext) marshalOAbsoluteMediaHttp2ᚖrpa_cloneᚋinternalᚋmodelsᚐAbsoluteMediaHTTP(ctx context.Context, sel ast.SelectionSet, v *models.AbsoluteMediaHTTP) graphql.Marshaler {
+func (ec *executionContext) marshalOAbsoluteMediaHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐAbsoluteMediaHTTP(ctx context.Context, sel ast.SelectionSet, v *models.AbsoluteMediaHTTP) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -10453,7 +12360,7 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	return res
 }
 
-func (ec *executionContext) unmarshalOConfirmActivation2ᚖrpa_cloneᚋinternalᚋmodelsᚐConfirmActivation(ctx context.Context, v interface{}) (*models.ConfirmActivation, error) {
+func (ec *executionContext) unmarshalOConfirmActivation2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐConfirmActivation(ctx context.Context, v interface{}) (*models.ConfirmActivation, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -10461,7 +12368,7 @@ func (ec *executionContext) unmarshalOConfirmActivation2ᚖrpa_cloneᚋinternal�
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalOEnrollmentHttp2ᚕᚖrpa_cloneᚋinternalᚋmodelsᚐEnrollmentHTTPᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.EnrollmentHTTP) graphql.Marshaler {
+func (ec *executionContext) marshalOEnrollmentHttp2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐEnrollmentHTTPᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.EnrollmentHTTP) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -10488,7 +12395,7 @@ func (ec *executionContext) marshalOEnrollmentHttp2ᚕᚖrpa_cloneᚋinternalᚋ
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNEnrollmentHttp2ᚖrpa_cloneᚋinternalᚋmodelsᚐEnrollmentHTTP(ctx, sel, v[i])
+			ret[i] = ec.marshalNEnrollmentHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐEnrollmentHTTP(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -10508,7 +12415,23 @@ func (ec *executionContext) marshalOEnrollmentHttp2ᚕᚖrpa_cloneᚋinternalᚋ
 	return ret
 }
 
-func (ec *executionContext) marshalOImageHttp2ᚖrpa_cloneᚋinternalᚋmodelsᚐImageHTTP(ctx context.Context, sel ast.SelectionSet, v *models.ImageHTTP) graphql.Marshaler {
+func (ec *executionContext) unmarshalOID2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalID(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOID2ᚖstring(ctx context.Context, sel ast.SelectionSet, v *string) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	res := graphql.MarshalID(*v)
+	return res
+}
+
+func (ec *executionContext) marshalOImageHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐImageHTTP(ctx context.Context, sel ast.SelectionSet, v *models.ImageHTTP) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -10531,14 +12454,14 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 	return res
 }
 
-func (ec *executionContext) marshalOMediaHttp2ᚖrpa_cloneᚋinternalᚋmodelsᚐMediaHTTP(ctx context.Context, sel ast.SelectionSet, v *models.MediaHTTP) graphql.Marshaler {
+func (ec *executionContext) marshalOMediaHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐMediaHTTP(ctx context.Context, sel ast.SelectionSet, v *models.MediaHTTP) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return ec._MediaHttp(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalORole2ᚕᚖrpa_cloneᚋinternalᚋmodelsᚐRole(ctx context.Context, v interface{}) ([]*models.Role, error) {
+func (ec *executionContext) unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx context.Context, v interface{}) ([]*models.Role, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -10550,7 +12473,7 @@ func (ec *executionContext) unmarshalORole2ᚕᚖrpa_cloneᚋinternalᚋmodels�
 	res := make([]*models.Role, len(vSlice))
 	for i := range vSlice {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalORole2ᚖrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, vSlice[i])
+		res[i], err = ec.unmarshalORole2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, vSlice[i])
 		if err != nil {
 			return nil, err
 		}
@@ -10558,7 +12481,7 @@ func (ec *executionContext) unmarshalORole2ᚕᚖrpa_cloneᚋinternalᚋmodels�
 	return res, nil
 }
 
-func (ec *executionContext) marshalORole2ᚕᚖrpa_cloneᚋinternalᚋmodelsᚐRole(ctx context.Context, sel ast.SelectionSet, v []*models.Role) graphql.Marshaler {
+func (ec *executionContext) marshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx context.Context, sel ast.SelectionSet, v []*models.Role) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -10585,7 +12508,7 @@ func (ec *executionContext) marshalORole2ᚕᚖrpa_cloneᚋinternalᚋmodelsᚐR
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalORole2ᚖrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, sel, v[i])
+			ret[i] = ec.marshalORole2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -10599,7 +12522,7 @@ func (ec *executionContext) marshalORole2ᚕᚖrpa_cloneᚋinternalᚋmodelsᚐR
 	return ret
 }
 
-func (ec *executionContext) unmarshalORole2ᚖrpa_cloneᚋinternalᚋmodelsᚐRole(ctx context.Context, v interface{}) (*models.Role, error) {
+func (ec *executionContext) unmarshalORole2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx context.Context, v interface{}) (*models.Role, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -10608,7 +12531,7 @@ func (ec *executionContext) unmarshalORole2ᚖrpa_cloneᚋinternalᚋmodelsᚐRo
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalORole2ᚖrpa_cloneᚋinternalᚋmodelsᚐRole(ctx context.Context, sel ast.SelectionSet, v *models.Role) graphql.Marshaler {
+func (ec *executionContext) marshalORole2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx context.Context, sel ast.SelectionSet, v *models.Role) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}

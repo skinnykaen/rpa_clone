@@ -1,4 +1,3 @@
-scalar Timestamp
 type UserHttp {
 	id: ID!
 	createdAt: Timestamp!
@@ -9,6 +8,7 @@ type UserHttp {
 	firstname: String!
 	lastname: String!
 	middlename: String!
+	nickname: String!
 	isActive: Boolean!
 	activationCode: Int!
 }
@@ -29,6 +29,7 @@ input NewUser {
 	firstname: String!
 	lastname: String!
 	middlename: String!
+	nickname: String!
 }
 
 input UpdateUser {
@@ -37,6 +38,7 @@ input UpdateUser {
 	firstname: String!
 	lastname: String!
 	middlename: String!
+	nickname: String!
 }
 
 type NewUserResponse {
@@ -58,16 +60,17 @@ type Response {
 }
 
 type Mutation {
-	CreateUser(input: NewUser!): NewUserResponse! @hasRole(roles: [SuperAdmin, UnitAdmin])
+	CreateUser(input: NewUser!): UserHttp! @hasRole(roles: [SuperAdmin, UnitAdmin])
 	UpdateUser(input: UpdateUser!): UserHttp! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
 	DeleteUser(id: ID!): Response! @hasRole(roles: [SuperAdmin, UnitAdmin])
-	SetUserIsActive(id: ID!, isActive: Boolean!): Response! @hasRole(roles: [SuperAdmin])
+	SetUserIsActive(id: ID!, isActive: Boolean!): Response! @hasRole(roles: [SuperAdmin, UnitAdmin])
 }
 
 type Query {
-	GetUserByAccessToken: UserHttp!
-	GetUserById(id: ID!): UserHttp! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
+	GetUserByAccessToken: UserHttp! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
+	GetUserById(id: ID!): UserHttp! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent])
 	GetAllUsers(page: Int, pageSize: Int, active: Boolean!, roles: [Role!]!): UsersList! @hasRole(roles: [SuperAdmin, UnitAdmin])
 }
 
 directive  @hasRole(roles: [Role]) on FIELD_DEFINITION
+scalar Timestamp

@@ -1,14 +1,14 @@
 package gateways
 
 import (
+	"github.com/skinnykaen/rpa_clone/internal/db"
+	"github.com/skinnykaen/rpa_clone/internal/models"
 	"gorm.io/gorm/clause"
-	"rpa_clone/internal/db"
-	"rpa_clone/internal/models"
 )
 
 type ProjectPageGateway interface {
 	CreateProjectPage(projectPage models.ProjectPageCore) (newProjectPage models.ProjectPageCore, err error)
-	DeleteProjectPage(id uint) error
+	DeleteProjectPage(id, clientId uint) error
 	UpdateProjectPage(projectPage models.ProjectPageCore) (updatedProjectPage models.ProjectPageCore, err error)
 	GetProjectPageById(id uint) (projectPage models.ProjectPageCore, err error)
 	SetIsShared(id uint, isShared bool) error
@@ -27,8 +27,10 @@ func (p ProjectPageGatewayImpl) CreateProjectPage(projectPage models.ProjectPage
 	return projectPage, result.Error
 }
 
-func (p ProjectPageGatewayImpl) DeleteProjectPage(id uint) error {
-	return p.postgresClient.Db.Delete(&models.ProjectPageCore{}, id).Error
+func (p ProjectPageGatewayImpl) DeleteProjectPage(id, clientId uint) error {
+	return p.postgresClient.Db.Where("author_id = ?", clientId).Delete(&models.ProjectPageCore{}, id).Error
+	//return p.postgresClient.Db.Model(&models.ProjectPageCore{}).Where("id = ? AND author_id = ?", id, clientId).
+	//Association("Project").Unscoped().Clear()
 }
 
 func (p ProjectPageGatewayImpl) UpdateProjectPage(projectPage models.ProjectPageCore) (updatedProjectPage models.ProjectPageCore, err error) {

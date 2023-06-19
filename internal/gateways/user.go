@@ -2,10 +2,10 @@ package gateways
 
 import (
 	"errors"
+	"github.com/skinnykaen/rpa_clone/internal/db"
+	"github.com/skinnykaen/rpa_clone/internal/models"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-	"rpa_clone/internal/db"
-	"rpa_clone/internal/models"
 )
 
 type UserGateway interface {
@@ -13,7 +13,7 @@ type UserGateway interface {
 	DeleteUser(id uint) (err error)
 	UpdateUser(user models.UserCore) (updatedUser models.UserCore, err error)
 	GetUserById(id uint) (user models.UserCore, err error)
-	GetUser(email, passwordHash string) (user models.UserCore, err error)
+	GetUserByEmail(email string) (user models.UserCore, err error)
 	GetAllUsers(offset, limit int, isActive bool, role []models.Role) (users []models.UserCore, countRows uint, err error)
 	DoesExistEmail(id uint, email string) (bool, error)
 	SetIsActive(id uint, isActive bool) error
@@ -23,8 +23,8 @@ type UserGatewayImpl struct {
 	postgresClient db.PostgresClient
 }
 
-func (u UserGatewayImpl) GetUser(email, passwordHash string) (user models.UserCore, err error) {
-	if err = u.postgresClient.Db.Where("email =? AND password = ?", email, passwordHash).Take(&user).Error; err != nil {
+func (u UserGatewayImpl) GetUserByEmail(email string) (user models.UserCore, err error) {
+	if err = u.postgresClient.Db.Where("email = ?", email).Take(&user).Error; err != nil {
 		return user, err
 	}
 	return user, nil

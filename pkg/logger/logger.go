@@ -1,9 +1,9 @@
 package logger
 
 import (
+	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"log"
 	"os"
-	"rpa_clone/internal/consts"
 )
 
 type Loggers struct {

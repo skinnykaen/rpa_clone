@@ -1,8 +1,8 @@
 package services
 
 import (
+	"github.com/skinnykaen/rpa_clone/internal/gateways"
 	"go.uber.org/fx"
-	"rpa_clone/internal/gateways"
 )
 
 type Services struct {

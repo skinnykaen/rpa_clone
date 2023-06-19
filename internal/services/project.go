@@ -1,8 +1,8 @@
 package services
 
 import (
-	"rpa_clone/internal/gateways"
-	"rpa_clone/internal/models"
+	"github.com/skinnykaen/rpa_clone/internal/gateways"
+	"github.com/skinnykaen/rpa_clone/internal/models"
 )
 
 type ProjectService interface {

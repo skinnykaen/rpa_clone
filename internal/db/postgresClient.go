@@ -1,16 +1,15 @@
 package db
 
 import (
-	"log"
-	"os"
-	"rpa_clone/internal/models"
-	"rpa_clone/pkg/logger"
-	"time"
-
+	"github.com/skinnykaen/rpa_clone/internal/models"
+	"github.com/skinnykaen/rpa_clone/pkg/logger"
 	"github.com/spf13/viper"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
+	"log"
+	"os"
+	"time"
 )
 
 type PostgresClient struct {
@@ -48,6 +47,8 @@ func (c *PostgresClient) Migrate() (err error) {
 	err = c.Db.AutoMigrate(
 		&models.UserCore{},
 		&models.ParentRelCore{},
+		&models.ProjectCore{},
+		&models.ProjectPageCore{},
 	)
 	return
 }

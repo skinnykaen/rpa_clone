@@ -3,12 +3,12 @@ package server
 import (
 	"context"
 	"github.com/dgrijalva/jwt-go/v4"
+	"github.com/skinnykaen/rpa_clone/internal/consts"
+	"github.com/skinnykaen/rpa_clone/internal/models"
+	"github.com/skinnykaen/rpa_clone/internal/services"
 	"github.com/spf13/viper"
 	"log"
 	"net/http"
-	"rpa_clone/internal/consts"
-	"rpa_clone/internal/models"
-	"rpa_clone/internal/services"
 	"strings"
 )
 

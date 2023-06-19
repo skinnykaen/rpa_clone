@@ -11,6 +11,6 @@ type ProjectCore struct {
 	UpdatedAt time.Time
 	DeletedAt gorm.DeletedAt `gorm:"index"`
 	AuthorID  uint
-	User      UserCore `gorm:""`
+	User      UserCore `gorm:"foreignKey:AuthorID"`
 	Json      string   `gorm:"not null;size: 65535"`
 }

@@ -1,8 +1,8 @@
 package gateways
 
 import (
+	"github.com/skinnykaen/rpa_clone/internal/db"
 	"go.uber.org/fx"
-	"rpa_clone/internal/db"
 )
 
 type Gateways struct {

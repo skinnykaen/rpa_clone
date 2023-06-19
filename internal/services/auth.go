@@ -4,10 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dgrijalva/jwt-go/v4"
+	"github.com/skinnykaen/rpa_clone/internal/gateways"
+	"github.com/skinnykaen/rpa_clone/internal/models"
+	"github.com/skinnykaen/rpa_clone/pkg/utils"
 	"github.com/spf13/viper"
-	"rpa_clone/internal/gateways"
-	"rpa_clone/internal/models"
-	"rpa_clone/pkg/utils"
 	"time"
 )
 
@@ -49,8 +49,10 @@ func (a AuthServiceImpl) Refresh(token string) (string, error) {
 }
 
 func (a AuthServiceImpl) SignIn(email, password string) (Tokens, error) {
-	passwordHash := utils.Hash(password)
-	user, err := a.userGateway.GetUser(email, passwordHash)
+	user, err := a.userGateway.GetUserByEmail(email)
+	if err = utils.ComparePassword(user.Password, password); err != nil {
+		return Tokens{}, err
+	}
 	if err != nil {
 		return Tokens{}, err
 	}
@@ -83,14 +85,14 @@ func (a AuthServiceImpl) SignUp(newUser models.UserCore) error {
 		return errors.New("please input password, at least 6 symbols")
 	}
 
-	passwordHash := utils.Hash(newUser.Password)
+	passwordHash := utils.HashPassword(newUser.Password)
 	newUser.Password = passwordHash
 	newUser, err = a.userGateway.CreateUser(newUser)
 	if err != nil {
 		return err
 	}
 
-	// TODO config path for activation
+	//TODO config path for activation + check setting activation by code
 	subject := "Ваш код активации аккаунта"
 	body := "<p> Введите этот код " + fmt.Sprintf("%d", newUser.ActivationCode) +
 		" для активации вашего аккаунта перейдя по ссылке http://localhost:3000/activation</p>"
