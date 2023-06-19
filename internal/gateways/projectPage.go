@@ -44,7 +44,6 @@ func (p ProjectPageGatewayImpl) CreateProjectPage(projectPage models.ProjectPage
 }
 
 func (p ProjectPageGatewayImpl) DeleteProjectPage(id, clientId uint) error {
-	//return p.postgresClient.Db.Where("author_id = ?", clientId).Delete(&models.ProjectPageCore{}, id).Error
 	if err := p.postgresClient.Db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("author_id = ?", clientId).Delete(&models.ProjectCore{}, id).Error; err != nil {
 			return err

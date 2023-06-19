@@ -48,6 +48,7 @@ func (u UserServiceImpl) CreateUser(user models.UserCore, clientRole models.Role
 
 func (u UserServiceImpl) DeleteUser(id uint) error {
 	// TODO maybe check userById and role
+	// delete all rels (projectPage, project, etc.)
 	return u.userGateway.DeleteUser(id)
 }
 

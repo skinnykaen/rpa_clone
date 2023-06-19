@@ -36,11 +36,6 @@ func (p ProjectPageServiceImpl) CreateProjectPage(authorId uint) (newProjectPage
 }
 
 func (p ProjectPageServiceImpl) DeleteProjectPage(id, clientId uint) error {
-	//err := p.projectGateway.DeleteProject(id, clientId)
-	//if err != nil {
-	//	return err
-	//}
-	//return p.projectGateway.DeleteProject(id, clientId)
 	return p.projectPageGateway.DeleteProjectPage(id, clientId)
 }
 
@@ -50,23 +45,17 @@ func (p ProjectPageServiceImpl) UpdateProjectPage(projectPage models.ProjectPage
 }
 
 func (p ProjectPageServiceImpl) GetProjectPageById(id, clientId uint) (projectPage models.ProjectPageCore, err error) {
-	//project, err := p.projectGateway.GetProjectById(id)
-	//if err != nil {
-	//	return
-	//}
 	projectPage, err = p.projectPageGateway.GetProjectPageById(id)
 	if err != nil {
 		return
 	}
 	if projectPage.IsShared {
-		//projectPage.UpdatedAt = project.UpdatedAt
 		return projectPage, nil
 	} else {
 		if projectPage.AuthorID != clientId {
 			return models.ProjectPageCore{}, errors.New("access denied")
 		}
 	}
-	//projectPage.UpdatedAt = project.UpdatedAt
 	return projectPage, nil
 }
 
