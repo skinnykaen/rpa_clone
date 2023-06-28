@@ -7,17 +7,13 @@ package resolvers
 import (
 	"context"
 	"fmt"
-	"math/rand"
-	"time"
-
 	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/models"
+	"github.com/skinnykaen/rpa_clone/pkg/utils"
 )
 
 // SignUp is the resolver for the SignUp field.
 func (r *mutationResolver) SignUp(ctx context.Context, input models.SignUp) (*models.Response, error) {
-	//FIXME
-	rand.Seed(time.Now().UnixNano())
 	newUser := models.UserCore{
 		Email:          input.Email,
 		Password:       input.Password,
@@ -27,7 +23,7 @@ func (r *mutationResolver) SignUp(ctx context.Context, input models.SignUp) (*mo
 		Nickname:       input.Nickname,
 		Role:           models.RoleStudent,
 		IsActive:       false,
-		ActivationCode: uint(rand.Intn(10000)),
+		ActivationLink: utils.GetHashString(input.Email),
 	}
 	err := r.authService.SignUp(newUser)
 	if err != nil {

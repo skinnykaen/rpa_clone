@@ -17,7 +17,7 @@ type AbsoluteMediaHTTP struct {
 type ConfirmActivation struct {
 	Email          string `json:"email"`
 	Password       string `json:"password"`
-	ActivationCode int    `json:"activationCode"`
+	ActivationLink int    `json:"activationLink"`
 }
 
 type CourseAPIMediaCollectionHTTP struct {
@@ -110,6 +110,10 @@ type Response struct {
 	Ok bool `json:"ok"`
 }
 
+type Settings struct {
+	ActivationByLink bool `json:"activationByLink"`
+}
+
 type SignIn struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -158,7 +162,7 @@ type UserHTTP struct {
 	Middlename     string `json:"middlename"`
 	Nickname       string `json:"nickname"`
 	IsActive       bool   `json:"isActive"`
-	ActivationCode int    `json:"activationCode"`
+	ActivationLink string `json:"activationLink"`
 }
 
 type UsersList struct {

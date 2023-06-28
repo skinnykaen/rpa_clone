@@ -15,7 +15,7 @@ input SignIn {
 input ConfirmActivation {
 	email: String!
 	password: String!
-	activationCode: Int!
+	activationLink: Int!
 }
 
 type SignInResponse {

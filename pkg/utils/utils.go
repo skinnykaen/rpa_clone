@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"github.com/jordan-wright/email"
 	"github.com/skinnykaen/rpa_clone/internal/models"
 	"github.com/spf13/viper"
@@ -56,4 +58,10 @@ func DoesHaveRole(clientRole models.Role, roles []*models.Role) bool {
 		}
 	}
 	return false
+}
+
+func GetHashString(s string) string {
+	h := sha1.New()
+	h.Write([]byte(s))
+	return hex.EncodeToString(h.Sum(nil))
 }

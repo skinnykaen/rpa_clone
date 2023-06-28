@@ -11,19 +11,22 @@ type Services struct {
 	AuthService        AuthService
 	ProjectService     ProjectService
 	ProjectPageService ProjectPageService
+	SettingsService    SettingsService
 }
 
 func SetupServices(
 	userGateway gateways.UserGateway,
 	projectGateway gateways.ProjectGateway,
 	projectPageGateway gateways.ProjectPageGateway,
+	settingsGateway gateways.SettingsGateway,
 ) Services {
 	return Services{
 		UserService: &UserServiceImpl{
 			userGateway: userGateway,
 		},
 		AuthService: &AuthServiceImpl{
-			userGateway: userGateway,
+			userGateway:     userGateway,
+			settingsGateway: settingsGateway,
 		},
 		ProjectService: &ProjectServiceImpl{
 			projectGateway: projectGateway,
@@ -31,6 +34,9 @@ func SetupServices(
 		ProjectPageService: &ProjectPageServiceImpl{
 			projectGateway:     projectGateway,
 			projectPageGateway: projectPageGateway,
+		},
+		SettingsService: &SettingsServiceImpl{
+			settingsGateway: settingsGateway,
 		},
 	}
 }

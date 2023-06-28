@@ -49,6 +49,19 @@ func (c *PostgresClient) Migrate() (err error) {
 		&models.ProjectPageCore{},
 		&models.ProjectCore{},
 		&models.ParentRelCore{},
+		&models.SettingsCore{},
 	)
-	return
+	if err != nil {
+		return err
+	}
+	var count int64
+	if err := c.Db.First(&models.SettingsCore{ID: 1}).Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	} else {
+		return c.Db.Create(&models.SettingsCore{ID: 1, ActivationByLink: true}).Error
+	}
+	return nil
 }

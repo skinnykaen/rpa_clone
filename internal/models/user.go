@@ -19,7 +19,7 @@ type UserCore struct {
 	Middlename     string         `gorm:"not null;"`
 	Nickname       string         `gorm:"not null;"`
 	IsActive       bool           `gorm:"not null;default:false;type:boolean;column:is_active"`
-	ActivationCode uint           `gorm:"not null;"`
+	ActivationLink string         `gorm:"not null;"`
 }
 
 func (u *UserHTTP) ToCore() UserCore {
@@ -34,7 +34,7 @@ func (u *UserHTTP) ToCore() UserCore {
 		Middlename:     u.Middlename,
 		Nickname:       u.Nickname,
 		IsActive:       u.IsActive,
-		ActivationCode: uint(u.ActivationCode),
+		ActivationLink: u.ActivationLink,
 	}
 }
 

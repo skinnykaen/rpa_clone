@@ -109,7 +109,7 @@ type ComplexityRoot struct {
 		DeleteProjectPage   func(childComplexity int, id string) int
 		DeleteUser          func(childComplexity int, id string) int
 		RefreshToken        func(childComplexity int, refreshToken string) int
-		SetActivationByCode func(childComplexity int, activationByCode bool) int
+		SetActivationByLink func(childComplexity int, activationByLink bool) int
 		SetUserIsActive     func(childComplexity int, id string, isActive bool) int
 		SignIn              func(childComplexity int, input models.SignIn) int
 		SignOut             func(childComplexity int) int
@@ -155,6 +155,7 @@ type ComplexityRoot struct {
 		GetCoursesByUser                func(childComplexity int) int
 		GetParentsByChild               func(childComplexity int, childID string) int
 		GetProjectPageByID              func(childComplexity int, id string) int
+		GetSettings                     func(childComplexity int) int
 		GetUserByAccessToken            func(childComplexity int) int
 		GetUserByID                     func(childComplexity int, id string) int
 		Me                              func(childComplexity int) int
@@ -164,13 +165,17 @@ type ComplexityRoot struct {
 		Ok func(childComplexity int) int
 	}
 
+	Settings struct {
+		ActivationByLink func(childComplexity int) int
+	}
+
 	SignInResponse struct {
 		AccessToken  func(childComplexity int) int
 		RefreshToken func(childComplexity int) int
 	}
 
 	UserHttp struct {
-		ActivationCode func(childComplexity int) int
+		ActivationLink func(childComplexity int) int
 		CreatedAt      func(childComplexity int) int
 		Email          func(childComplexity int) int
 		Firstname      func(childComplexity int) int
@@ -205,7 +210,7 @@ type MutationResolver interface {
 	CreateProjectPage(ctx context.Context) (*models.ProjectPageHTTP, error)
 	UpdateProjectPage(ctx context.Context, input models.UpdateProjectPage) (*models.ProjectPageHTTP, error)
 	DeleteProjectPage(ctx context.Context, id string) (*models.Response, error)
-	SetActivationByCode(ctx context.Context, activationByCode bool) (*models.Response, error)
+	SetActivationByLink(ctx context.Context, activationByLink bool) (*models.Response, error)
 }
 type QueryResolver interface {
 	GetUserByAccessToken(ctx context.Context) (*models.UserHTTP, error)
@@ -219,6 +224,7 @@ type QueryResolver interface {
 	GetProjectPageByID(ctx context.Context, id string) (*models.ProjectPageHTTP, error)
 	GetAllProjectPagesByAuthorID(ctx context.Context, id string, page *int, pageSize *int) (*models.ProjectPageHTTPList, error)
 	GetAllProjectPagesByAccessToken(ctx context.Context, page *int, pageSize *int) (*models.ProjectPageHTTPList, error)
+	GetSettings(ctx context.Context) (*models.Settings, error)
 }
 
 type executableSchema struct {
@@ -579,17 +585,17 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.RefreshToken(childComplexity, args["refreshToken"].(string)), true
 
-	case "Mutation.SetActivationByCode":
-		if e.complexity.Mutation.SetActivationByCode == nil {
+	case "Mutation.SetActivationByLink":
+		if e.complexity.Mutation.SetActivationByLink == nil {
 			break
 		}
 
-		args, err := ec.field_Mutation_SetActivationByCode_args(context.TODO(), rawArgs)
+		args, err := ec.field_Mutation_SetActivationByLink_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Mutation.SetActivationByCode(childComplexity, args["activationByCode"].(bool)), true
+		return e.complexity.Mutation.SetActivationByLink(childComplexity, args["activationByLink"].(bool)), true
 
 	case "Mutation.SetUserIsActive":
 		if e.complexity.Mutation.SetUserIsActive == nil {
@@ -882,6 +888,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.GetProjectPageByID(childComplexity, args["id"].(string)), true
 
+	case "Query.GetSettings":
+		if e.complexity.Query.GetSettings == nil {
+			break
+		}
+
+		return e.complexity.Query.GetSettings(childComplexity), true
+
 	case "Query.GetUserByAccessToken":
 		if e.complexity.Query.GetUserByAccessToken == nil {
 			break
@@ -915,6 +928,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Response.Ok(childComplexity), true
 
+	case "Settings.activationByLink":
+		if e.complexity.Settings.ActivationByLink == nil {
+			break
+		}
+
+		return e.complexity.Settings.ActivationByLink(childComplexity), true
+
 	case "SignInResponse.accessToken":
 		if e.complexity.SignInResponse.AccessToken == nil {
 			break
@@ -929,12 +949,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.SignInResponse.RefreshToken(childComplexity), true
 
-	case "UserHttp.activationCode":
-		if e.complexity.UserHttp.ActivationCode == nil {
+	case "UserHttp.activationLink":
+		if e.complexity.UserHttp.ActivationLink == nil {
 			break
 		}
 
-		return e.complexity.UserHttp.ActivationCode(childComplexity), true
+		return e.complexity.UserHttp.ActivationLink(childComplexity), true
 
 	case "UserHttp.createdAt":
 		if e.complexity.UserHttp.CreatedAt == nil {
@@ -1137,7 +1157,7 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 	return introspection.WrapTypeFromDef(parsedSchema, parsedSchema.Types[name]), nil
 }
 
-//go:embed "auth.graphqls" "course.graphqls" "parentRel.graphqls" "projectPage.graphqls" "setting.graphqls" "user.graphqls"
+//go:embed "auth.graphqls" "course.graphqls" "parentRel.graphqls" "projectPage.graphqls" "settings.graphqls" "user.graphqls"
 var sourcesFS embed.FS
 
 func sourceData(filename string) string {
@@ -1153,7 +1173,7 @@ var sources = []*ast.Source{
 	{Name: "course.graphqls", Input: sourceData("course.graphqls"), BuiltIn: false},
 	{Name: "parentRel.graphqls", Input: sourceData("parentRel.graphqls"), BuiltIn: false},
 	{Name: "projectPage.graphqls", Input: sourceData("projectPage.graphqls"), BuiltIn: false},
-	{Name: "setting.graphqls", Input: sourceData("setting.graphqls"), BuiltIn: false},
+	{Name: "settings.graphqls", Input: sourceData("settings.graphqls"), BuiltIn: false},
 	{Name: "user.graphqls", Input: sourceData("user.graphqls"), BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
@@ -1300,18 +1320,18 @@ func (ec *executionContext) field_Mutation_RefreshToken_args(ctx context.Context
 	return args, nil
 }
 
-func (ec *executionContext) field_Mutation_SetActivationByCode_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Mutation_SetActivationByLink_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 bool
-	if tmp, ok := rawArgs["activationByCode"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("activationByCode"))
+	if tmp, ok := rawArgs["activationByLink"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("activationByLink"))
 		arg0, err = ec.unmarshalNBoolean2bool(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["activationByCode"] = arg0
+	args["activationByLink"] = arg0
 	return args, nil
 }
 
@@ -3364,8 +3384,8 @@ func (ec *executionContext) fieldContext_Mutation_CreateUser(ctx context.Context
 				return ec.fieldContext_UserHttp_nickname(ctx, field)
 			case "isActive":
 				return ec.fieldContext_UserHttp_isActive(ctx, field)
-			case "activationCode":
-				return ec.fieldContext_UserHttp_activationCode(ctx, field)
+			case "activationLink":
+				return ec.fieldContext_UserHttp_activationLink(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UserHttp", field.Name)
 		},
@@ -3469,8 +3489,8 @@ func (ec *executionContext) fieldContext_Mutation_UpdateUser(ctx context.Context
 				return ec.fieldContext_UserHttp_nickname(ctx, field)
 			case "isActive":
 				return ec.fieldContext_UserHttp_isActive(ctx, field)
-			case "activationCode":
-				return ec.fieldContext_UserHttp_activationCode(ctx, field)
+			case "activationLink":
+				return ec.fieldContext_UserHttp_activationLink(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UserHttp", field.Name)
 		},
@@ -4339,8 +4359,8 @@ func (ec *executionContext) fieldContext_Mutation_DeleteProjectPage(ctx context.
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_SetActivationByCode(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_SetActivationByCode(ctx, field)
+func (ec *executionContext) _Mutation_SetActivationByLink(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_SetActivationByLink(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -4354,7 +4374,7 @@ func (ec *executionContext) _Mutation_SetActivationByCode(ctx context.Context, f
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().SetActivationByCode(rctx, fc.Args["activationByCode"].(bool))
+			return ec.resolvers.Mutation().SetActivationByLink(rctx, fc.Args["activationByLink"].(bool))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin"})
@@ -4394,7 +4414,7 @@ func (ec *executionContext) _Mutation_SetActivationByCode(ctx context.Context, f
 	return ec.marshalNResponse2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐResponse(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Mutation_SetActivationByCode(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_SetActivationByLink(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Mutation",
 		Field:      field,
@@ -4415,7 +4435,7 @@ func (ec *executionContext) fieldContext_Mutation_SetActivationByCode(ctx contex
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_SetActivationByCode_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_SetActivationByLink_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -5367,8 +5387,8 @@ func (ec *executionContext) fieldContext_Query_GetUserByAccessToken(ctx context.
 				return ec.fieldContext_UserHttp_nickname(ctx, field)
 			case "isActive":
 				return ec.fieldContext_UserHttp_isActive(ctx, field)
-			case "activationCode":
-				return ec.fieldContext_UserHttp_activationCode(ctx, field)
+			case "activationLink":
+				return ec.fieldContext_UserHttp_activationLink(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UserHttp", field.Name)
 		},
@@ -5461,8 +5481,8 @@ func (ec *executionContext) fieldContext_Query_GetUserById(ctx context.Context, 
 				return ec.fieldContext_UserHttp_nickname(ctx, field)
 			case "isActive":
 				return ec.fieldContext_UserHttp_isActive(ctx, field)
-			case "activationCode":
-				return ec.fieldContext_UserHttp_activationCode(ctx, field)
+			case "activationLink":
+				return ec.fieldContext_UserHttp_activationLink(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UserHttp", field.Name)
 		},
@@ -5651,8 +5671,8 @@ func (ec *executionContext) fieldContext_Query_Me(ctx context.Context, field gra
 				return ec.fieldContext_UserHttp_nickname(ctx, field)
 			case "isActive":
 				return ec.fieldContext_UserHttp_isActive(ctx, field)
-			case "activationCode":
-				return ec.fieldContext_UserHttp_activationCode(ctx, field)
+			case "activationLink":
+				return ec.fieldContext_UserHttp_activationLink(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UserHttp", field.Name)
 		},
@@ -6250,6 +6270,78 @@ func (ec *executionContext) fieldContext_Query_GetAllProjectPagesByAccessToken(c
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_GetSettings(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_GetSettings(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().GetSettings(rctx)
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin"})
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.HasRole == nil {
+				return nil, errors.New("directive hasRole is not implemented")
+			}
+			return ec.directives.HasRole(ctx, nil, directive0, roles)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*models.Settings); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/skinnykaen/rpa_clone/internal/models.Settings`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.Settings)
+	fc.Result = res
+	return ec.marshalNSettings2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐSettings(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_GetSettings(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "activationByLink":
+				return ec.fieldContext_Settings_activationByLink(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Settings", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query___type(ctx, field)
 	if err != nil {
@@ -6413,6 +6505,50 @@ func (ec *executionContext) _Response_ok(ctx context.Context, field graphql.Coll
 func (ec *executionContext) fieldContext_Response_ok(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Response",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Settings_activationByLink(ctx context.Context, field graphql.CollectedField, obj *models.Settings) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Settings_activationByLink(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ActivationByLink, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Settings_activationByLink(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Settings",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -6995,8 +7131,8 @@ func (ec *executionContext) fieldContext_UserHttp_isActive(ctx context.Context, 
 	return fc, nil
 }
 
-func (ec *executionContext) _UserHttp_activationCode(ctx context.Context, field graphql.CollectedField, obj *models.UserHTTP) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_UserHttp_activationCode(ctx, field)
+func (ec *executionContext) _UserHttp_activationLink(ctx context.Context, field graphql.CollectedField, obj *models.UserHTTP) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_UserHttp_activationLink(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -7009,7 +7145,7 @@ func (ec *executionContext) _UserHttp_activationCode(ctx context.Context, field 
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.ActivationCode, nil
+		return obj.ActivationLink, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -7021,19 +7157,19 @@ func (ec *executionContext) _UserHttp_activationCode(ctx context.Context, field 
 		}
 		return graphql.Null
 	}
-	res := resTmp.(int)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_UserHttp_activationCode(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_UserHttp_activationLink(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "UserHttp",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -7100,8 +7236,8 @@ func (ec *executionContext) fieldContext_UsersList_users(ctx context.Context, fi
 				return ec.fieldContext_UserHttp_nickname(ctx, field)
 			case "isActive":
 				return ec.fieldContext_UserHttp_isActive(ctx, field)
-			case "activationCode":
-				return ec.fieldContext_UserHttp_activationCode(ctx, field)
+			case "activationLink":
+				return ec.fieldContext_UserHttp_activationLink(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UserHttp", field.Name)
 		},
@@ -8933,7 +9069,7 @@ func (ec *executionContext) unmarshalInputConfirmActivation(ctx context.Context,
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"email", "password", "activationCode"}
+	fieldsInOrder := [...]string{"email", "password", "activationLink"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -8958,15 +9094,15 @@ func (ec *executionContext) unmarshalInputConfirmActivation(ctx context.Context,
 				return it, err
 			}
 			it.Password = data
-		case "activationCode":
+		case "activationLink":
 			var err error
 
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("activationCode"))
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("activationLink"))
 			data, err := ec.unmarshalNInt2int(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.ActivationCode = data
+			it.ActivationLink = data
 		}
 	}
 
@@ -9801,9 +9937,9 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "SetActivationByCode":
+		case "SetActivationByLink":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_SetActivationByCode(ctx, field)
+				return ec._Mutation_SetActivationByLink(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -10289,6 +10425,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "GetSettings":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_GetSettings(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "__type":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Query___type(ctx, field)
@@ -10333,6 +10491,45 @@ func (ec *executionContext) _Response(ctx context.Context, sel ast.SelectionSet,
 			out.Values[i] = graphql.MarshalString("Response")
 		case "ok":
 			out.Values[i] = ec._Response_ok(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var settingsImplementors = []string{"Settings"}
+
+func (ec *executionContext) _Settings(ctx context.Context, sel ast.SelectionSet, obj *models.Settings) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, settingsImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Settings")
+		case "activationByLink":
+			out.Values[i] = ec._Settings_activationByLink(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -10469,8 +10666,8 @@ func (ec *executionContext) _UserHttp(ctx context.Context, sel ast.SelectionSet,
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "activationCode":
-			out.Values[i] = ec._UserHttp_activationCode(ctx, field, obj)
+		case "activationLink":
+			out.Values[i] = ec._UserHttp_activationLink(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -11154,6 +11351,20 @@ func (ec *executionContext) marshalNRole2ᚕgithubᚗcomᚋskinnykaenᚋrpa_clon
 	}
 
 	return ret
+}
+
+func (ec *executionContext) marshalNSettings2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐSettings(ctx context.Context, sel ast.SelectionSet, v models.Settings) graphql.Marshaler {
+	return ec._Settings(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNSettings2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐSettings(ctx context.Context, sel ast.SelectionSet, v *models.Settings) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Settings(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNSignIn2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐSignIn(ctx context.Context, v interface{}) (models.SignIn, error) {

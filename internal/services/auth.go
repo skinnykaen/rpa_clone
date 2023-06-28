@@ -29,7 +29,8 @@ type AuthService interface {
 }
 
 type AuthServiceImpl struct {
-	userGateway gateways.UserGateway
+	userGateway     gateways.UserGateway
+	settingsGateway gateways.SettingsGateway
 }
 
 func (a AuthServiceImpl) Refresh(token string) (string, error) {
@@ -93,10 +94,20 @@ func (a AuthServiceImpl) SignUp(newUser models.UserCore) error {
 		return err
 	}
 
-	//TODO config path for activation + check setting activation by code
-	subject := "Ваш код активации аккаунта"
-	body := "<p> Введите этот код " + fmt.Sprintf("%d", newUser.ActivationCode) +
-		" для активации вашего аккаунта перейдя по ссылке http://localhost:3000/activation</p>"
+	activationByLink, err := a.settingsGateway.GetActivationByLink()
+	if err != nil {
+		return err
+	}
+	var subject, body string
+	//TODO config path for activation
+	if activationByLink {
+		subject = "Ваша ссылка активации аккаунта"
+		body = "<p>Перейдите по ссылке http://localhost:5000/activation/" + fmt.Sprintf("%s", newUser.ActivationLink) +
+			" для активации вашего аккаунта.</p>"
+	} else {
+		subject = "Активация аккаунта"
+		body = "<p>На данный момент активация по ссылке недоступна. Ждите активации от администратора.</p>"
+	}
 	err = utils.SendEmail(subject, newUser.Email, body)
 	return err
 }

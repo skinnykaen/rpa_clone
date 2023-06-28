@@ -10,7 +10,7 @@ type UserHttp {
 	middlename: String!
 	nickname: String!
 	isActive: Boolean!
-	activationCode: Int!
+	activationLink: String!
 }
 
 enum Role {

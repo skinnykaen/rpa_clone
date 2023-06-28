@@ -10,6 +10,7 @@ type Resolver struct {
 	userService        services.UserService
 	authService        services.AuthService
 	projectPageService services.ProjectPageService
+	settingsService    services.SettingsService
 }
 
 func SetupResolvers(
@@ -17,11 +18,13 @@ func SetupResolvers(
 	userService services.UserService,
 	authService services.AuthService,
 	projectPageService services.ProjectPageService,
+	settingsService services.SettingsService,
 ) Resolver {
 	return Resolver{
 		loggers:            loggers,
 		userService:        userService,
 		authService:        authService,
 		projectPageService: projectPageService,
+		settingsService:    settingsService,
 	}
 }
