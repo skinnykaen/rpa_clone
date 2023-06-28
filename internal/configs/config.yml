@@ -24,11 +24,11 @@ api_urls:
   getRegistration: "https://edx-test.ru/register?next=%2F"
 
 cors:
-  allowed_origins: [ "http://0.0.0.0:3030",
+  allowed_origins: [ "http://0.0.0.0:5000",
                      "http://0.0.0.0:3000",
                      "http://0.0.0.0:8601",
                      "http://localhost:3030",
-                     "http://localhost:3000",
+                     "http://localhost:5000",
                      "http://localhost"
   ]
   allow_credentials: true

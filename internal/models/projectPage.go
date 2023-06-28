@@ -24,14 +24,23 @@ type ProjectPageCore struct {
 
 func (p *ProjectPageHTTP) FromCore(projectPage ProjectPageCore) {
 	p.ID = strconv.Itoa(int(projectPage.ID))
-	p.CreatedAt = projectPage.CreatedAt.String()
-	p.UpdatedAt = projectPage.UpdatedAt.String()
+	p.CreatedAt = projectPage.CreatedAt.Format(time.DateTime)
+	p.UpdatedAt = projectPage.UpdatedAt.Format(time.DateTime)
+	p.ProjectUpdatedAt = projectPage.Project.UpdatedAt.Format(time.DateTime)
 	p.AuthorID = strconv.Itoa(int(projectPage.AuthorID))
 	p.ProjectID = strconv.Itoa(int(projectPage.ProjectID))
-	p.ProjectUpdatedAt = projectPage.Project.UpdatedAt.String()
 	p.Title = projectPage.Title
 	p.Instruction = projectPage.Instruction
 	p.Notes = projectPage.Notes
 	p.LinkToScratch = projectPage.LinkToScratch
 	p.IsShared = projectPage.IsShared
+}
+
+func FromProjectPagesCore(projectPagesCore []ProjectPageCore) (projectPagesHttp []*ProjectPageHTTP) {
+	for _, projectPageCore := range projectPagesCore {
+		var tmpProjectPageHttp ProjectPageHTTP
+		tmpProjectPageHttp.FromCore(projectPageCore)
+		projectPagesHttp = append(projectPagesHttp, &tmpProjectPageHttp)
+	}
+	return
 }

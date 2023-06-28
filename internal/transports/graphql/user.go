@@ -23,7 +23,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input models.NewUser)
 		Middlename: input.Middlename,
 		Nickname:   input.Nickname,
 		IsActive:   true,
-		Role:       models.Role(input.Role),
+		Role:       input.Role,
 	}
 	newUser, err := r.userService.CreateUser(user, ctx.Value(consts.KeyRole).(models.Role))
 	if err != nil {

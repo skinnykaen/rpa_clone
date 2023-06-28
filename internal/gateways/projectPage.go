@@ -12,6 +12,8 @@ import (
 type ProjectPageGateway interface {
 	CreateProjectPage(projectPage models.ProjectPageCore, project models.ProjectCore) (newProjectPage models.ProjectPageCore, err error)
 	DeleteProjectPage(id, clientId uint) error
+	GetAllProjectPages(offset, limit int) (projectPages []models.ProjectPageCore, countRows uint, err error)
+	GetProjectPagesByAuthorId(id uint, offset, limit int) (projectPages []models.ProjectPageCore, countRows uint, err error)
 	UpdateProjectPage(projectPage models.ProjectPageCore) (updatedProjectPage models.ProjectPageCore, err error)
 	GetProjectPageById(id uint) (projectPage models.ProjectPageCore, err error)
 	SetIsShared(id uint, isShared bool) error
@@ -19,6 +21,27 @@ type ProjectPageGateway interface {
 
 type ProjectPageGatewayImpl struct {
 	postgresClient db.PostgresClient
+}
+
+func (p ProjectPageGatewayImpl) GetProjectPagesByAuthorId(id uint, offset, limit int) (projectPages []models.ProjectPageCore, countRows uint, err error) {
+	var count int64
+	result := p.postgresClient.Db.Limit(limit).Offset(offset).Where("author_id = ?", id).
+		Find(&projectPages).Preload("Project")
+	if result.Error != nil {
+		return []models.ProjectPageCore{}, 0, result.Error
+	}
+	result.Count(&count)
+	return projectPages, uint(count), result.Error
+}
+
+func (p ProjectPageGatewayImpl) GetAllProjectPages(offset, limit int) (projectPages []models.ProjectPageCore, countRows uint, err error) {
+	var count int64
+	result := p.postgresClient.Db.Limit(limit).Offset(offset).Find(&projectPages).Preload("Project")
+	if result.Error != nil {
+		return []models.ProjectPageCore{}, 0, result.Error
+	}
+	result.Count(&count)
+	return projectPages, uint(count), result.Error
 }
 
 func (p ProjectPageGatewayImpl) SetIsShared(id uint, isShared bool) error {

@@ -41,6 +41,11 @@ func (u UserServiceImpl) CreateUser(user models.UserCore, clientRole models.Role
 	if exist {
 		return models.UserCore{}, errors.New("email already in use")
 	}
+	if len(user.Password) < 6 {
+		return models.UserCore{}, errors.New("please input password, at least 6 symbols")
+	}
+	passwordHash := utils.HashPassword(user.Password)
+	user.Password = passwordHash
 	return u.userGateway.CreateUser(user)
 }
 

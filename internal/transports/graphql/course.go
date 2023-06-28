@@ -11,22 +11,12 @@ import (
 	"github.com/skinnykaen/rpa_clone/internal/models"
 )
 
-// GetCourseContent is the resolver for the GetCourseContent field.
-func (r *queryResolver) GetCourseContent(ctx context.Context, courseID string) (*models.CourseHTTP, error) {
-	panic(fmt.Errorf("not implemented: GetCourseContent - GetCourseContent"))
+// GetCourseByID is the resolver for the GetCourseById field.
+func (r *queryResolver) GetCourseByID(ctx context.Context, id string) (*models.CourseHTTP, error) {
+	panic(fmt.Errorf("not implemented: GetCourseByID - GetCourseById"))
 }
 
 // GetCoursesByUser is the resolver for the GetCoursesByUser field.
 func (r *queryResolver) GetCoursesByUser(ctx context.Context) (*models.CoursesListHTTP, error) {
 	panic(fmt.Errorf("not implemented: GetCoursesByUser - GetCoursesByUser"))
-}
-
-// GetAllPublicCourses is the resolver for the GetAllPublicCourses field.
-func (r *queryResolver) GetAllPublicCourses(ctx context.Context, pageNumber string) (*models.CoursesListHTTP, error) {
-	panic(fmt.Errorf("not implemented: GetAllPublicCourses - GetAllPublicCourses"))
-}
-
-// GetEnrollments is the resolver for the GetEnrollments field.
-func (r *queryResolver) GetEnrollments(ctx context.Context, username string) (*models.EnrollmentsListHTTP, error) {
-	panic(fmt.Errorf("not implemented: GetEnrollments - GetEnrollments"))
 }

@@ -27,7 +27,7 @@ input UpdateProjectPage {
 
 extend type Query {
 	GetProjectPageById(id: ID!): ProjectPageHttp! @hasRole(roles: [SuperAdmin, UnitAdmin, Student, Teacher])
-	GetAllProjectPagesByAuthorId(id: ID, page: Int, pageSize: Int): ProjectPageHttpList! @hasRole(roles: [SuperAdmin, UnitAdmin, Student, Teacher])
+	GetAllProjectPagesByAuthorId(id: ID!, page: Int, pageSize: Int): ProjectPageHttpList! @hasRole(roles: [SuperAdmin, UnitAdmin, Student, Teacher])
 	GetAllProjectPagesByAccessToken(page: Int, pageSize: Int): ProjectPageHttpList! @hasRole(roles: [SuperAdmin, UnitAdmin, Student, Teacher])
 }
 

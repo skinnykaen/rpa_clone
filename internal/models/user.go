@@ -18,7 +18,7 @@ type UserCore struct {
 	Lastname       string         `gorm:"not null;"`
 	Middlename     string         `gorm:"not null;"`
 	Nickname       string         `gorm:"not null;"`
-	IsActive       bool           `gorm:"not null;default:false"`
+	IsActive       bool           `gorm:"not null;default:false;type:boolean;column:is_active"`
 	ActivationCode uint           `gorm:"not null;"`
 }
 
@@ -40,6 +40,8 @@ func (u *UserHTTP) ToCore() UserCore {
 
 func (u *UserHTTP) FromCore(userCore UserCore) {
 	u.ID = strconv.Itoa(int(userCore.ID))
+	u.CreatedAt = userCore.CreatedAt.Format(time.DateTime)
+	u.UpdatedAt = userCore.UpdatedAt.Format(time.DateTime)
 	u.Email = userCore.Email
 	u.Firstname = userCore.Firstname
 	u.Lastname = userCore.Lastname

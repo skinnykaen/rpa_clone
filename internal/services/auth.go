@@ -35,6 +35,7 @@ type AuthServiceImpl struct {
 func (a AuthServiceImpl) Refresh(token string) (string, error) {
 	claims, err := parseToken(token, []byte(viper.GetString("auth_refresh_signing_key")))
 	if err != nil {
+		fmt.Printf("%s", err)
 		return "", err
 	}
 	user := models.UserCore{
@@ -113,17 +114,17 @@ func generateToken(user models.UserCore, duration time.Duration, signingKey []by
 	return
 }
 
-func parseToken(token string, key []byte) (UserClaims, error) {
-	data, err := jwt.ParseWithClaims(token, UserClaims{},
+func parseToken(token string, key []byte) (*UserClaims, error) {
+	data, err := jwt.ParseWithClaims(token, &UserClaims{},
 		func(token *jwt.Token) (interface{}, error) {
 			return key, nil
 		})
 	if err != nil {
-		return UserClaims{}, err
+		return &UserClaims{}, err
 	}
-	claims, ok := data.Claims.(UserClaims)
+	claims, ok := data.Claims.(*UserClaims)
 	if !ok {
-		return UserClaims{}, errors.New("token claims are not of type *StandardClaims")
+		return &UserClaims{}, errors.New("token claims are not of type *StandardClaims")
 	}
 	return claims, nil
 }

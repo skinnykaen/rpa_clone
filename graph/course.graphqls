@@ -47,35 +47,12 @@ type MediaHttp {
 	uri: String!
 }
 
-type EnrollmentHttp {
-	created: Timestamp!
-	mode: String!
-	isActive: Boolean!
-	user: String!
-	course_id: String!
-}
-
-type EnrollmentsListHttp {
-	next: String!
-	previous: String!
-	results:  [EnrollmentHttp!]
-}
-
-type Pagination {
-	next: String!
-	previous: String!
-	count: Int!
-	num_pages: Int!
-}
-
 type CoursesListHttp {
 	courses:    [CourseHttp!]!
 	countRows: Int!
 }
 
 extend type Query {
-	GetCourseContent(courseId: String!): CourseHttp!
-	GetCoursesByUser: CoursesListHttp!
-	GetAllPublicCourses(pageNumber: String!): CoursesListHttp!
-	GetEnrollments(username: String!): EnrollmentsListHttp!
+	GetCourseById(id: ID!): CourseHttp! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Student])
+	GetCoursesByUser: CoursesListHttp! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Student])
 }

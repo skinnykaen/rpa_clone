@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/rs/cors"
 	"github.com/skinnykaen/rpa_clone/graph"
 	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/graphql/directives"
@@ -45,7 +46,14 @@ func NewServer(
 					port,
 				)
 				go func() {
-					loggers.Err.Fatal(http.ListenAndServe(":"+port, mux))
+					loggers.Err.Fatal(http.ListenAndServe(":"+port, cors.New(
+						cors.Options{
+							AllowedOrigins:   viper.GetStringSlice("cors.allowed_origins"),
+							AllowCredentials: viper.GetBool("cors.allow_credentials"),
+							AllowedMethods:   viper.GetStringSlice("cors.allowed_methods"),
+							AllowedHeaders:   viper.GetStringSlice("cors.allowed_headers"),
+						},
+					).Handler(mux)))
 				}()
 				return
 			},

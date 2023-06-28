@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/models"
 )
 
@@ -49,8 +50,6 @@ func (r *mutationResolver) SignIn(ctx context.Context, input models.SignIn) (*mo
 	}, nil
 }
 
-//TODO delete signOut?
-
 // SignOut is the resolver for the SignOut field.
 func (r *mutationResolver) SignOut(ctx context.Context) (*models.Response, error) {
 	panic(fmt.Errorf("not implemented: SignOut - SignOut"))
@@ -71,4 +70,16 @@ func (r *mutationResolver) RefreshToken(ctx context.Context, refreshToken string
 // ConfirmActivation is the resolver for the ConfirmActivation field.
 func (r *mutationResolver) ConfirmActivation(ctx context.Context, input *models.ConfirmActivation) (*models.Response, error) {
 	panic(fmt.Errorf("not implemented: ConfirmActivation - ConfirmActivation"))
+}
+
+// Me is the resolver for the Me field.
+func (r *queryResolver) Me(ctx context.Context) (*models.UserHTTP, error) {
+	user, err := r.userService.GetUserById(ctx.Value(consts.KeyId).(uint), ctx.Value(consts.KeyRole).(models.Role))
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, err
+	}
+	userHttp := models.UserHTTP{}
+	userHttp.FromCore(user)
+	return &userHttp, nil
 }

@@ -25,7 +25,7 @@ enum Role {
 input NewUser {
 	email: String!
 	password: String!
-	role: Int!
+	role: Role!
 	firstname: String!
 	lastname: String!
 	middlename: String!
@@ -68,7 +68,7 @@ type Mutation {
 
 type Query {
 	GetUserByAccessToken: UserHttp! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
-	GetUserById(id: ID!): UserHttp! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent])
+	GetUserById(id: ID!): UserHttp! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
 	GetAllUsers(page: Int, pageSize: Int, active: Boolean!, roles: [Role!]!): UsersList! @hasRole(roles: [SuperAdmin, UnitAdmin])
 }
 

@@ -56,20 +56,6 @@ type CoursesListHTTP struct {
 	CountRows int           `json:"countRows"`
 }
 
-type EnrollmentHTTP struct {
-	Created  string `json:"created"`
-	Mode     string `json:"mode"`
-	IsActive bool   `json:"isActive"`
-	User     string `json:"user"`
-	CourseID string `json:"course_id"`
-}
-
-type EnrollmentsListHTTP struct {
-	Next     string            `json:"next"`
-	Previous string            `json:"previous"`
-	Results  []*EnrollmentHTTP `json:"results,omitempty"`
-}
-
 type ImageHTTP struct {
 	ID    string `json:"id"`
 	Raw   string `json:"raw"`
@@ -85,7 +71,7 @@ type MediaHTTP struct {
 type NewUser struct {
 	Email      string `json:"email"`
 	Password   string `json:"password"`
-	Role       int    `json:"role"`
+	Role       Role   `json:"role"`
 	Firstname  string `json:"firstname"`
 	Lastname   string `json:"lastname"`
 	Middlename string `json:"middlename"`
@@ -99,13 +85,6 @@ type NewUserResponse struct {
 	Firstname  string `json:"firstname"`
 	Lastname   string `json:"lastname"`
 	Middlename string `json:"middlename"`
-}
-
-type Pagination struct {
-	Next     string `json:"next"`
-	Previous string `json:"previous"`
-	Count    int    `json:"count"`
-	NumPages int    `json:"num_pages"`
 }
 
 type ProjectPageHTTP struct {

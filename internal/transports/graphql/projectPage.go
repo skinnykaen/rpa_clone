@@ -7,9 +7,10 @@ package resolvers
 import (
 	"context"
 	"fmt"
+	"strconv"
+
 	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/models"
-	"strconv"
 )
 
 // CreateProjectPage is the resolver for the CreateProjectPage field.
@@ -61,11 +62,28 @@ func (r *queryResolver) GetProjectPageByID(ctx context.Context, id string) (*mod
 }
 
 // GetAllProjectPagesByAuthorID is the resolver for the GetAllProjectPagesByAuthorId field.
-func (r *queryResolver) GetAllProjectPagesByAuthorID(ctx context.Context, id *string, page *int, pageSize *int) (*models.ProjectPageHTTPList, error) {
-	panic(fmt.Errorf("not implemented: GetAllProjectPagesByAuthorID - GetAllProjectPagesByAuthorId"))
+func (r *queryResolver) GetAllProjectPagesByAuthorID(ctx context.Context, id string, page *int, pageSize *int) (*models.ProjectPageHTTPList, error) {
+	atoi, err := strconv.Atoi(id)
+	projects, countRows, err := r.projectPageService.GetProjectsPageByAuthorId(uint(atoi), page, pageSize)
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, err
+	}
+	return &models.ProjectPageHTTPList{
+		ProjectPages: models.FromProjectPagesCore(projects),
+		CountRows:    int(countRows),
+	}, nil
 }
 
 // GetAllProjectPagesByAccessToken is the resolver for the GetAllProjectPagesByAccessToken field.
 func (r *queryResolver) GetAllProjectPagesByAccessToken(ctx context.Context, page *int, pageSize *int) (*models.ProjectPageHTTPList, error) {
-	panic(fmt.Errorf("not implemented: GetAllProjectPagesByAccessToken - GetAllProjectPagesByAccessToken"))
+	projects, countRows, err := r.projectPageService.GetAllProjectPages(page, pageSize, ctx.Value(consts.KeyRole).(models.Role), ctx.Value(consts.KeyId).(uint))
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, err
+	}
+	return &models.ProjectPageHTTPList{
+		ProjectPages: models.FromProjectPagesCore(projects),
+		CountRows:    int(countRows),
+	}, nil
 }

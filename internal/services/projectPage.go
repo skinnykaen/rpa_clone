@@ -5,19 +5,34 @@ import (
 	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/gateways"
 	"github.com/skinnykaen/rpa_clone/internal/models"
+	"github.com/skinnykaen/rpa_clone/pkg/utils"
 )
 
 type ProjectPageService interface {
 	CreateProjectPage(authorId uint) (newProjectPage models.ProjectPageCore, err error)
 	DeleteProjectPage(id, clientId uint) error
+	GetAllProjectPages(page, pageSize *int, role models.Role, userId uint) (projectPages []models.ProjectPageCore, countRows uint, err error)
 	UpdateProjectPage(projectPage models.ProjectPageCore) (models.ProjectPageCore, error)
 	GetProjectPageById(id, clientId uint) (projectPage models.ProjectPageCore, err error)
-	GetProjectsPageByAuthorId(id uint, page, pageSize *int) (projectPages []models.ProjectPageCore, err error)
+	GetProjectsPageByAuthorId(id uint, page, pageSize *int) (projectPages []models.ProjectPageCore, countRows uint, err error)
 }
 
 type ProjectPageServiceImpl struct {
 	projectGateway     gateways.ProjectGateway
 	projectPageGateway gateways.ProjectPageGateway
+}
+
+func (p ProjectPageServiceImpl) GetAllProjectPages(page, pageSize *int, role models.Role, userId uint) (projectPages []models.ProjectPageCore, countRows uint, err error) {
+	offset, limit := utils.GetOffsetAndLimit(page, pageSize)
+	if role.String() != models.RoleSuperAdmin.String() {
+		return p.projectPageGateway.GetProjectPagesByAuthorId(userId, offset, limit)
+	}
+	return p.projectPageGateway.GetAllProjectPages(offset, limit)
+}
+
+func (p ProjectPageServiceImpl) GetProjectsPageByAuthorId(id uint, page, pageSize *int) (projectPages []models.ProjectPageCore, countRows uint, err error) {
+	offset, limit := utils.GetOffsetAndLimit(page, pageSize)
+	return p.projectPageGateway.GetProjectPagesByAuthorId(id, offset, limit)
 }
 
 func (p ProjectPageServiceImpl) CreateProjectPage(authorId uint) (newProjectPage models.ProjectPageCore, err error) {
@@ -57,16 +72,4 @@ func (p ProjectPageServiceImpl) GetProjectPageById(id, clientId uint) (projectPa
 		}
 	}
 	return projectPage, nil
-}
-
-func (p ProjectPageServiceImpl) GetProjectsPageByAuthorId(id uint, page, pageSize *int) (projectPages []models.ProjectPageCore, err error) {
-	//project, err := p.projectGateway.GetProjectById(id)
-	//if err != nil {
-	//	return models.ProjectPageCore{}, err
-	//}
-
-	//TODO implement
-	panic("implement me")
-	//offset, limit := utils.GetOffsetAndLimit(page, pageSize)
-	//p.projectPageGateway.
 }

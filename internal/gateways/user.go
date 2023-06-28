@@ -31,7 +31,10 @@ func (u UserGatewayImpl) GetUserByEmail(email string) (user models.UserCore, err
 }
 
 func (u UserGatewayImpl) SetIsActive(id uint, isActive bool) error {
-	return u.postgresClient.Db.Where(&models.UserCore{ID: id}).Update("is_active", isActive).Error
+	return u.postgresClient.Db.First(&models.UserCore{ID: id}).Updates(
+		map[string]interface{}{
+			"is_active": isActive,
+		}).Error
 }
 
 func (u UserGatewayImpl) DoesExistEmail(id uint, email string) (bool, error) {
@@ -63,6 +66,7 @@ func (u UserGatewayImpl) UpdateUser(user models.UserCore) (models.UserCore, erro
 			"firstname":  user.Firstname,
 			"lastname":   user.Lastname,
 			"middlename": user.Middlename,
+			"nickname":   user.Nickname,
 		}).Error
 	return user, err
 }
@@ -86,8 +90,8 @@ func (u UserGatewayImpl) GetAllUsers(
 			models.RoleUnitAdmin,
 		)
 	}
-	result := u.postgresClient.Db.Limit(limit).Offset(offset).Where("is_active = ?", isActive).
-		Where("(role) IN ?", role).Find(&users)
+	result := u.postgresClient.Db.Limit(limit).Offset(offset).
+		Where("is_active = ? AND (role) IN ?", isActive, role).Find(&users)
 	if result.Error != nil {
 		return []models.UserCore{}, 0, result.Error
 	}
