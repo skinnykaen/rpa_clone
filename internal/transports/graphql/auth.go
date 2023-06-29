@@ -6,7 +6,8 @@ package resolvers
 
 import (
 	"context"
-	"fmt"
+	"time"
+
 	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/models"
 	"github.com/skinnykaen/rpa_clone/pkg/utils"
@@ -23,7 +24,7 @@ func (r *mutationResolver) SignUp(ctx context.Context, input models.SignUp) (*mo
 		Nickname:       input.Nickname,
 		Role:           models.RoleStudent,
 		IsActive:       false,
-		ActivationLink: utils.GetHashString(input.Email),
+		ActivationLink: utils.GetHashString(time.Now().String()),
 	}
 	err := r.authService.SignUp(newUser)
 	if err != nil {
@@ -46,11 +47,6 @@ func (r *mutationResolver) SignIn(ctx context.Context, input models.SignIn) (*mo
 	}, nil
 }
 
-// SignOut is the resolver for the SignOut field.
-func (r *mutationResolver) SignOut(ctx context.Context) (*models.Response, error) {
-	panic(fmt.Errorf("not implemented: SignOut - SignOut"))
-}
-
 // RefreshToken is the resolver for the RefreshToken field.
 func (r *mutationResolver) RefreshToken(ctx context.Context, refreshToken string) (*models.SignInResponse, error) {
 	accessToken, err := r.authService.Refresh(refreshToken)
@@ -64,8 +60,16 @@ func (r *mutationResolver) RefreshToken(ctx context.Context, refreshToken string
 }
 
 // ConfirmActivation is the resolver for the ConfirmActivation field.
-func (r *mutationResolver) ConfirmActivation(ctx context.Context, input *models.ConfirmActivation) (*models.Response, error) {
-	panic(fmt.Errorf("not implemented: ConfirmActivation - ConfirmActivation"))
+func (r *mutationResolver) ConfirmActivation(ctx context.Context, activationLink string) (*models.SignInResponse, error) {
+	tokens, err := r.authService.ConfirmActivation(activationLink)
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return &models.SignInResponse{}, err
+	}
+	return &models.SignInResponse{
+		AccessToken:  tokens.Access,
+		RefreshToken: tokens.Refresh,
+	}, nil
 }
 
 // Me is the resolver for the Me field.

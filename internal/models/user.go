@@ -19,7 +19,7 @@ type UserCore struct {
 	Middlename     string         `gorm:"not null;"`
 	Nickname       string         `gorm:"not null;"`
 	IsActive       bool           `gorm:"not null;default:false;type:boolean;column:is_active"`
-	ActivationLink string         `gorm:"not null;"`
+	ActivationLink string
 }
 
 func (u *UserHTTP) ToCore() UserCore {

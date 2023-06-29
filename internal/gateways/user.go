@@ -13,6 +13,7 @@ type UserGateway interface {
 	DeleteUser(id uint) (err error)
 	UpdateUser(user models.UserCore) (updatedUser models.UserCore, err error)
 	GetUserById(id uint) (user models.UserCore, err error)
+	GetUserByActivationLink(link string) (user models.UserCore, err error)
 	GetUserByEmail(email string) (user models.UserCore, err error)
 	GetAllUsers(offset, limit int, isActive bool, role []models.Role) (users []models.UserCore, countRows uint, err error)
 	DoesExistEmail(id uint, email string) (bool, error)
@@ -23,6 +24,13 @@ type UserGatewayImpl struct {
 	postgresClient db.PostgresClient
 }
 
+func (u UserGatewayImpl) GetUserByActivationLink(link string) (user models.UserCore, err error) {
+	if err = u.postgresClient.Db.Where("activation_link = ?", link).Take(&user).Error; err != nil {
+		return user, err
+	}
+	return user, nil
+}
+
 func (u UserGatewayImpl) GetUserByEmail(email string) (user models.UserCore, err error) {
 	if err = u.postgresClient.Db.Where("email = ?", email).Take(&user).Error; err != nil {
 		return user, err
@@ -31,10 +39,18 @@ func (u UserGatewayImpl) GetUserByEmail(email string) (user models.UserCore, err
 }
 
 func (u UserGatewayImpl) SetIsActive(id uint, isActive bool) error {
-	return u.postgresClient.Db.First(&models.UserCore{ID: id}).Updates(
-		map[string]interface{}{
+	var updateStruct map[string]interface{}
+	if isActive {
+		updateStruct = map[string]interface{}{
+			"is_active":       isActive,
+			"activation_link": "",
+		}
+	} else {
+		updateStruct = map[string]interface{}{
 			"is_active": isActive,
-		}).Error
+		}
+	}
+	return u.postgresClient.Db.First(&models.UserCore{ID: id}).Updates(updateStruct).Error
 }
 
 func (u UserGatewayImpl) DoesExistEmail(id uint, email string) (bool, error) {

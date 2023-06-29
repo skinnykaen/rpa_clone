@@ -26,6 +26,7 @@ type AuthService interface {
 	SignUp(newUser models.UserCore) error
 	SignIn(email, password string) (Tokens, error)
 	Refresh(token string) (string, error)
+	ConfirmActivation(link string) (Tokens, error)
 }
 
 type AuthServiceImpl struct {
@@ -33,10 +34,35 @@ type AuthServiceImpl struct {
 	settingsGateway gateways.SettingsGateway
 }
 
+func (a AuthServiceImpl) ConfirmActivation(link string) (Tokens, error) {
+	activationByLink, err := a.settingsGateway.GetActivationByLink()
+	if err != nil {
+		return Tokens{Access: "", Refresh: ""}, err
+	}
+	if !activationByLink {
+		return Tokens{Access: "", Refresh: ""}, errors.New("activation link is currently unavailable")
+	}
+	user, err := a.userGateway.GetUserByActivationLink(link)
+	if err != nil {
+		return Tokens{Access: "", Refresh: ""}, err
+	}
+	if err := a.userGateway.SetIsActive(user.ID, true); err != nil {
+		return Tokens{Access: "", Refresh: ""}, err
+	}
+	access, err := generateToken(user, viper.GetDuration("auth_access_token_ttl"), []byte(viper.GetString("auth_access_signing_key")))
+	if err != nil {
+		return Tokens{}, err
+	}
+	refresh, err := generateToken(user, viper.GetDuration("auth_refresh_token_ttl"), []byte(viper.GetString("auth_refresh_signing_key")))
+	if err != nil {
+		return Tokens{}, err
+	}
+	return Tokens{Access: access, Refresh: refresh}, nil
+}
+
 func (a AuthServiceImpl) Refresh(token string) (string, error) {
 	claims, err := parseToken(token, []byte(viper.GetString("auth_refresh_signing_key")))
 	if err != nil {
-		fmt.Printf("%s", err)
 		return "", err
 	}
 	user := models.UserCore{

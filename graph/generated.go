@@ -101,7 +101,7 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		ConfirmActivation   func(childComplexity int, input *models.ConfirmActivation) int
+		ConfirmActivation   func(childComplexity int, activationLink string) int
 		CreateParentRel     func(childComplexity int, parentID string, childID string) int
 		CreateProjectPage   func(childComplexity int) int
 		CreateUser          func(childComplexity int, input models.NewUser) int
@@ -112,7 +112,6 @@ type ComplexityRoot struct {
 		SetActivationByLink func(childComplexity int, activationByLink bool) int
 		SetUserIsActive     func(childComplexity int, id string, isActive bool) int
 		SignIn              func(childComplexity int, input models.SignIn) int
-		SignOut             func(childComplexity int) int
 		SignUp              func(childComplexity int, input models.SignUp) int
 		UpdateProjectPage   func(childComplexity int, input models.UpdateProjectPage) int
 		UpdateUser          func(childComplexity int, input models.UpdateUser) int
@@ -202,9 +201,8 @@ type MutationResolver interface {
 	SetUserIsActive(ctx context.Context, id string, isActive bool) (*models.Response, error)
 	SignUp(ctx context.Context, input models.SignUp) (*models.Response, error)
 	SignIn(ctx context.Context, input models.SignIn) (*models.SignInResponse, error)
-	SignOut(ctx context.Context) (*models.Response, error)
 	RefreshToken(ctx context.Context, refreshToken string) (*models.SignInResponse, error)
-	ConfirmActivation(ctx context.Context, input *models.ConfirmActivation) (*models.Response, error)
+	ConfirmActivation(ctx context.Context, activationLink string) (*models.SignInResponse, error)
 	CreateParentRel(ctx context.Context, parentID string, childID string) (*models.Response, error)
 	DeleteParentRel(ctx context.Context, parentID string, childID string) (*models.Response, error)
 	CreateProjectPage(ctx context.Context) (*models.ProjectPageHTTP, error)
@@ -504,7 +502,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.ConfirmActivation(childComplexity, args["input"].(*models.ConfirmActivation)), true
+		return e.complexity.Mutation.ConfirmActivation(childComplexity, args["activationLink"].(string)), true
 
 	case "Mutation.CreateParentRel":
 		if e.complexity.Mutation.CreateParentRel == nil {
@@ -620,13 +618,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.SignIn(childComplexity, args["input"].(models.SignIn)), true
-
-	case "Mutation.SignOut":
-		if e.complexity.Mutation.SignOut == nil {
-			break
-		}
-
-		return e.complexity.Mutation.SignOut(childComplexity), true
 
 	case "Mutation.SignUp":
 		if e.complexity.Mutation.SignUp == nil {
@@ -1055,7 +1046,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	rc := graphql.GetOperationContext(ctx)
 	ec := executionContext{rc, e, 0, 0, make(chan graphql.DeferredResult)}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
-		ec.unmarshalInputConfirmActivation,
 		ec.unmarshalInputNewUser,
 		ec.unmarshalInputSignIn,
 		ec.unmarshalInputSignUp,
@@ -1200,15 +1190,15 @@ func (ec *executionContext) dir_hasRole_args(ctx context.Context, rawArgs map[st
 func (ec *executionContext) field_Mutation_ConfirmActivation_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *models.ConfirmActivation
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalOConfirmActivation2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐConfirmActivation(ctx, tmp)
+	var arg0 string
+	if tmp, ok := rawArgs["activationLink"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("activationLink"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
+	args["activationLink"] = arg0
 	return args, nil
 }
 
@@ -3795,54 +3785,6 @@ func (ec *executionContext) fieldContext_Mutation_SignIn(ctx context.Context, fi
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_SignOut(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_SignOut(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().SignOut(rctx)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*models.Response)
-	fc.Result = res
-	return ec.marshalNResponse2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐResponse(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Mutation_SignOut(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "ok":
-				return ec.fieldContext_Response_ok(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Response", field.Name)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Mutation_RefreshToken(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_RefreshToken(ctx, field)
 	if err != nil {
@@ -3918,7 +3860,7 @@ func (ec *executionContext) _Mutation_ConfirmActivation(ctx context.Context, fie
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().ConfirmActivation(rctx, fc.Args["input"].(*models.ConfirmActivation))
+		return ec.resolvers.Mutation().ConfirmActivation(rctx, fc.Args["activationLink"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3930,9 +3872,9 @@ func (ec *executionContext) _Mutation_ConfirmActivation(ctx context.Context, fie
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*models.Response)
+	res := resTmp.(*models.SignInResponse)
 	fc.Result = res
-	return ec.marshalNResponse2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐResponse(ctx, field.Selections, res)
+	return ec.marshalNSignInResponse2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐSignInResponse(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_ConfirmActivation(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3943,10 +3885,12 @@ func (ec *executionContext) fieldContext_Mutation_ConfirmActivation(ctx context.
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "ok":
-				return ec.fieldContext_Response_ok(ctx, field)
+			case "accessToken":
+				return ec.fieldContext_SignInResponse_accessToken(ctx, field)
+			case "refreshToken":
+				return ec.fieldContext_SignInResponse_refreshToken(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Response", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type SignInResponse", field.Name)
 		},
 	}
 	defer func() {
@@ -9062,53 +9006,6 @@ func (ec *executionContext) fieldContext___Type_specifiedByURL(ctx context.Conte
 
 // region    **************************** input.gotpl *****************************
 
-func (ec *executionContext) unmarshalInputConfirmActivation(ctx context.Context, obj interface{}) (models.ConfirmActivation, error) {
-	var it models.ConfirmActivation
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"email", "password", "activationLink"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "email":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("email"))
-			data, err := ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Email = data
-		case "password":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("password"))
-			data, err := ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Password = data
-		case "activationLink":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("activationLink"))
-			data, err := ec.unmarshalNInt2int(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ActivationLink = data
-		}
-	}
-
-	return it, nil
-}
-
 func (ec *executionContext) unmarshalInputNewUser(ctx context.Context, obj interface{}) (models.NewUser, error) {
 	var it models.NewUser
 	asMap := map[string]interface{}{}
@@ -9877,13 +9774,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "SignIn":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_SignIn(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "SignOut":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_SignOut(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -11787,14 +11677,6 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	}
 	res := graphql.MarshalBoolean(*v)
 	return res
-}
-
-func (ec *executionContext) unmarshalOConfirmActivation2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐConfirmActivation(ctx context.Context, v interface{}) (*models.ConfirmActivation, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputConfirmActivation(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalOImageHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐImageHTTP(ctx context.Context, sel ast.SelectionSet, v *models.ImageHTTP) graphql.Marshaler {

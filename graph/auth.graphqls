@@ -12,12 +12,6 @@ input SignIn {
 	password: String!
 }
 
-input ConfirmActivation {
-	email: String!
-	password: String!
-	activationLink: Int!
-}
-
 type SignInResponse {
 	accessToken: String!
 	refreshToken: String!
@@ -30,7 +24,6 @@ extend type Query {
 extend type Mutation  {
 	SignUp(input: SignUp!): Response!
 	SignIn(input: SignIn!): SignInResponse!
-	SignOut: Response!
 	RefreshToken(refreshToken: String!): SignInResponse!
-	ConfirmActivation(input: ConfirmActivation): Response!
+	ConfirmActivation(activationLink: String!): SignInResponse!
 }

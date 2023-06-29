@@ -14,12 +14,6 @@ type AbsoluteMediaHTTP struct {
 	URIAbsolute string `json:"uri_absolute"`
 }
 
-type ConfirmActivation struct {
-	Email          string `json:"email"`
-	Password       string `json:"password"`
-	ActivationLink int    `json:"activationLink"`
-}
-
 type CourseAPIMediaCollectionHTTP struct {
 	ID          string             `json:"id"`
 	BannerImage *AbsoluteMediaHTTP `json:"banner_image,omitempty"`
