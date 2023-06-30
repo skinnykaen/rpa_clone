@@ -8,19 +8,68 @@ import (
 	"strconv"
 )
 
-type ConfirmActivation struct {
-	Email          string `json:"email"`
-	Password       string `json:"password"`
-	ActivationCode int    `json:"activationCode"`
+type AbsoluteMediaHTTP struct {
+	ID          string `json:"id"`
+	URI         string `json:"uri"`
+	URIAbsolute string `json:"uri_absolute"`
+}
+
+type CourseAPIMediaCollectionHTTP struct {
+	ID          string             `json:"id"`
+	BannerImage *AbsoluteMediaHTTP `json:"banner_image,omitempty"`
+	CourseImage *MediaHTTP         `json:"course_image,omitempty"`
+	CourseVideo *MediaHTTP         `json:"course_video,omitempty"`
+	Image       *ImageHTTP         `json:"image,omitempty"`
+}
+
+type CourseHTTP struct {
+	ID               string                        `json:"id"`
+	BlocksURL        string                        `json:"blocks_url"`
+	Effort           string                        `json:"effort"`
+	EnrollmentStart  string                        `json:"enrollment_start"`
+	EnrollmentEnd    string                        `json:"enrollment_end"`
+	End              string                        `json:"end"`
+	Name             string                        `json:"name"`
+	Number           string                        `json:"number"`
+	Org              string                        `json:"org"`
+	ShortDescription string                        `json:"short_description"`
+	Start            string                        `json:"start"`
+	StartDisplay     string                        `json:"start_display"`
+	StartType        string                        `json:"start_type"`
+	Pacing           string                        `json:"pacing"`
+	MobileAvailable  bool                          `json:"mobile_available"`
+	Hidden           bool                          `json:"hidden"`
+	InvitationOnly   bool                          `json:"invitation_only"`
+	Overview         *string                       `json:"overview,omitempty"`
+	CourseID         string                        `json:"course_id"`
+	Media            *CourseAPIMediaCollectionHTTP `json:"media"`
+}
+
+type CoursesListHTTP struct {
+	Courses   []*CourseHTTP `json:"courses"`
+	CountRows int           `json:"countRows"`
+}
+
+type ImageHTTP struct {
+	ID    string `json:"id"`
+	Raw   string `json:"raw"`
+	Small string `json:"small"`
+	Large string `json:"large"`
+}
+
+type MediaHTTP struct {
+	ID  string `json:"id"`
+	URI string `json:"uri"`
 }
 
 type NewUser struct {
 	Email      string `json:"email"`
 	Password   string `json:"password"`
-	Role       int    `json:"role"`
+	Role       Role   `json:"role"`
 	Firstname  string `json:"firstname"`
 	Lastname   string `json:"lastname"`
 	Middlename string `json:"middlename"`
+	Nickname   string `json:"nickname"`
 }
 
 type NewUserResponse struct {
@@ -32,8 +81,31 @@ type NewUserResponse struct {
 	Middlename string `json:"middlename"`
 }
 
+type ProjectPageHTTP struct {
+	ID               string `json:"id"`
+	CreatedAt        string `json:"createdAt"`
+	UpdatedAt        string `json:"updatedAt"`
+	AuthorID         string `json:"authorId"`
+	ProjectID        string `json:"projectId"`
+	ProjectUpdatedAt string `json:"projectUpdatedAt"`
+	Title            string `json:"title"`
+	Instruction      string `json:"instruction"`
+	Notes            string `json:"notes"`
+	LinkToScratch    string `json:"linkToScratch"`
+	IsShared         bool   `json:"isShared"`
+}
+
+type ProjectPageHTTPList struct {
+	ProjectPages []*ProjectPageHTTP `json:"projectPages"`
+	CountRows    int                `json:"countRows"`
+}
+
 type Response struct {
 	Ok bool `json:"ok"`
+}
+
+type Settings struct {
+	ActivationByLink bool `json:"activationByLink"`
 }
 
 type SignIn struct {
@@ -55,12 +127,21 @@ type SignUp struct {
 	Middlename string `json:"middlename"`
 }
 
+type UpdateProjectPage struct {
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Instruction string `json:"instruction"`
+	Notes       string `json:"notes"`
+	IsShared    bool   `json:"isShared"`
+}
+
 type UpdateUser struct {
 	ID         string `json:"id"`
 	Email      string `json:"email"`
 	Firstname  string `json:"firstname"`
 	Lastname   string `json:"lastname"`
 	Middlename string `json:"middlename"`
+	Nickname   string `json:"nickname"`
 }
 
 type UserHTTP struct {
@@ -73,8 +154,9 @@ type UserHTTP struct {
 	Firstname      string `json:"firstname"`
 	Lastname       string `json:"lastname"`
 	Middlename     string `json:"middlename"`
+	Nickname       string `json:"nickname"`
 	IsActive       bool   `json:"isActive"`
-	ActivationCode int    `json:"activationCode"`
+	ActivationLink string `json:"activationLink"`
 }
 
 type UsersList struct {

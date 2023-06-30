@@ -1,7 +1,7 @@
 package main
 
 import (
-	"rpa_clone/internal/app"
+	"github.com/skinnykaen/rpa_clone/internal/app"
 )
 
 func main() {

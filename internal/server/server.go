@@ -2,18 +2,18 @@ package server
 
 import (
 	"context"
-	"fmt"
-	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/rs/cors"
+	"github.com/skinnykaen/rpa_clone/graph"
+	"github.com/skinnykaen/rpa_clone/internal/consts"
+	"github.com/skinnykaen/rpa_clone/internal/graphql/directives"
+	resolvers "github.com/skinnykaen/rpa_clone/internal/transports/graphql"
+	http2 "github.com/skinnykaen/rpa_clone/internal/transports/http"
+	"github.com/skinnykaen/rpa_clone/pkg/logger"
 	"github.com/spf13/viper"
 	"go.uber.org/fx"
 	"net/http"
-	"rpa_clone/graph"
-	"rpa_clone/internal/consts"
-	"rpa_clone/internal/models"
-	resolvers "rpa_clone/internal/transports/graphql"
-	"rpa_clone/pkg/logger"
 )
 
 func NewServer(
@@ -21,28 +21,24 @@ func NewServer(
 	lifecycle fx.Lifecycle,
 	loggers logger.Loggers,
 	resolver resolvers.Resolver,
+	hanlers http2.Handlers,
 ) {
 	lifecycle.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) (err error) {
 				port := viper.GetString("graphql_server_port")
 				c := graph.Config{Resolvers: &resolver}
+				c.Directives.HasRole = directives.HasRole(loggers.Err)
 				mux := http.NewServeMux()
-				//c.Directives.HasRole = HasRoleDirective()
-				c.Directives.HasRole = func(ctx context.Context, obj interface{}, next graphql.Resolver, roles []*models.Role) (res interface{}, err error) {
-					fmt.Println(ctx.Value(consts.KeyId))
-					fmt.Println(ctx.Value(consts.KeyRole))
-					return next(ctx)
-				}
 				srv := handler.NewDefaultServer(graph.NewExecutableSchema(c))
-				mux.Handle("/query", Auth(srv))
 				switch m {
 				case consts.Production:
-					http.Handle("/query", mux)
+					mux.Handle("/query", Auth(srv, loggers.Err))
 					break
 				case consts.Development:
-					http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-					http.Handle("/query", mux)
+					mux.Handle("/", playground.Handler("GraphQL playground", "/query"))
+					mux.Handle("/query", Auth(srv, loggers.Err))
+					mux.Handle("/project", Auth(hanlers.ProjectHandler, loggers.Err))
 					break
 				}
 				loggers.Info.Printf("Connect to %s:%s/ for GraphQL playground",
@@ -50,7 +46,14 @@ func NewServer(
 					port,
 				)
 				go func() {
-					loggers.Err.Fatal(http.ListenAndServe(":"+port, nil))
+					loggers.Err.Fatal(http.ListenAndServe(":"+port, cors.New(
+						cors.Options{
+							AllowedOrigins:   viper.GetStringSlice("cors.allowed_origins"),
+							AllowCredentials: viper.GetBool("cors.allow_credentials"),
+							AllowedMethods:   viper.GetStringSlice("cors.allowed_methods"),
+							AllowedHeaders:   viper.GetStringSlice("cors.allowed_headers"),
+						},
+					).Handler(mux)))
 				}()
 				return
 			},

@@ -12,21 +12,18 @@ input SignIn {
 	password: String!
 }
 
-input ConfirmActivation {
-	email: String!
-	password: String!
-	activationCode: Int!
-}
-
 type SignInResponse {
 	accessToken: String!
 	refreshToken: String!
 }
 
+extend type Query {
+	Me: UserHttp! @hasRole(roles:[Student, Teacher, Parent, UnitAdmin, SuperAdmin])
+}
+
 extend type Mutation  {
 	SignUp(input: SignUp!): Response!
 	SignIn(input: SignIn!): SignInResponse!
-	SignOut: Response!
-	RefreshToken(refreshToken: String!): SignInResponse! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
-	ConfirmActivation(input: ConfirmActivation): Response!
+	RefreshToken(refreshToken: String!): SignInResponse!
+	ConfirmActivation(activationLink: String!): SignInResponse!
 }

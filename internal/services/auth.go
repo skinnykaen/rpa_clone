@@ -4,10 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dgrijalva/jwt-go/v4"
+	"github.com/skinnykaen/rpa_clone/internal/gateways"
+	"github.com/skinnykaen/rpa_clone/internal/models"
+	"github.com/skinnykaen/rpa_clone/pkg/utils"
 	"github.com/spf13/viper"
-	"rpa_clone/internal/gateways"
-	"rpa_clone/internal/models"
-	"rpa_clone/pkg/utils"
 	"time"
 )
 
@@ -26,10 +26,38 @@ type AuthService interface {
 	SignUp(newUser models.UserCore) error
 	SignIn(email, password string) (Tokens, error)
 	Refresh(token string) (string, error)
+	ConfirmActivation(link string) (Tokens, error)
 }
 
 type AuthServiceImpl struct {
-	userGateway gateways.UserGateway
+	userGateway     gateways.UserGateway
+	settingsGateway gateways.SettingsGateway
+}
+
+func (a AuthServiceImpl) ConfirmActivation(link string) (Tokens, error) {
+	activationByLink, err := a.settingsGateway.GetActivationByLink()
+	if err != nil {
+		return Tokens{Access: "", Refresh: ""}, err
+	}
+	if !activationByLink {
+		return Tokens{Access: "", Refresh: ""}, errors.New("activation link is currently unavailable")
+	}
+	user, err := a.userGateway.GetUserByActivationLink(link)
+	if err != nil {
+		return Tokens{Access: "", Refresh: ""}, err
+	}
+	if err := a.userGateway.SetIsActive(user.ID, true); err != nil {
+		return Tokens{Access: "", Refresh: ""}, err
+	}
+	access, err := generateToken(user, viper.GetDuration("auth_access_token_ttl"), []byte(viper.GetString("auth_access_signing_key")))
+	if err != nil {
+		return Tokens{}, err
+	}
+	refresh, err := generateToken(user, viper.GetDuration("auth_refresh_token_ttl"), []byte(viper.GetString("auth_refresh_signing_key")))
+	if err != nil {
+		return Tokens{}, err
+	}
+	return Tokens{Access: access, Refresh: refresh}, nil
 }
 
 func (a AuthServiceImpl) Refresh(token string) (string, error) {
@@ -49,8 +77,10 @@ func (a AuthServiceImpl) Refresh(token string) (string, error) {
 }
 
 func (a AuthServiceImpl) SignIn(email, password string) (Tokens, error) {
-	passwordHash := utils.Hash(password)
-	user, err := a.userGateway.GetUser(email, passwordHash)
+	user, err := a.userGateway.GetUserByEmail(email)
+	if err = utils.ComparePassword(user.Password, password); err != nil {
+		return Tokens{}, err
+	}
 	if err != nil {
 		return Tokens{}, err
 	}
@@ -83,17 +113,27 @@ func (a AuthServiceImpl) SignUp(newUser models.UserCore) error {
 		return errors.New("please input password, at least 6 symbols")
 	}
 
-	passwordHash := utils.Hash(newUser.Password)
+	passwordHash := utils.HashPassword(newUser.Password)
 	newUser.Password = passwordHash
 	newUser, err = a.userGateway.CreateUser(newUser)
 	if err != nil {
 		return err
 	}
 
-	// TODO config path for activation
-	subject := "Ваш код активации аккаунта"
-	body := "<p> Введите этот код " + fmt.Sprintf("%d", newUser.ActivationCode) +
-		" для активации вашего аккаунта перейдя по ссылке http://localhost:3000/activation</p>"
+	activationByLink, err := a.settingsGateway.GetActivationByLink()
+	if err != nil {
+		return err
+	}
+	var subject, body string
+	//TODO config path for activation
+	if activationByLink {
+		subject = "Ваша ссылка активации аккаунта"
+		body = "<p>Перейдите по ссылке http://localhost:5000/activation/" + fmt.Sprintf("%s", newUser.ActivationLink) +
+			" для активации вашего аккаунта.</p>"
+	} else {
+		subject = "Активация аккаунта"
+		body = "<p>На данный момент активация по ссылке недоступна. Ждите активации от администратора.</p>"
+	}
 	err = utils.SendEmail(subject, newUser.Email, body)
 	return err
 }
@@ -111,17 +151,17 @@ func generateToken(user models.UserCore, duration time.Duration, signingKey []by
 	return
 }
 
-func parseToken(token string, key []byte) (UserClaims, error) {
-	data, err := jwt.ParseWithClaims(token, UserClaims{},
+func parseToken(token string, key []byte) (*UserClaims, error) {
+	data, err := jwt.ParseWithClaims(token, &UserClaims{},
 		func(token *jwt.Token) (interface{}, error) {
 			return key, nil
 		})
 	if err != nil {
-		return UserClaims{}, err
+		return &UserClaims{}, err
 	}
-	claims, ok := data.Claims.(UserClaims)
+	claims, ok := data.Claims.(*UserClaims)
 	if !ok {
-		return UserClaims{}, errors.New("token claims are not of type *StandardClaims")
+		return &UserClaims{}, errors.New("token claims are not of type *StandardClaims")
 	}
 	return claims, nil
 }

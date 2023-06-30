@@ -1,16 +1,15 @@
 package db
 
 import (
-	"log"
-	"os"
-	"rpa_clone/internal/models"
-	"rpa_clone/pkg/logger"
-	"time"
-
+	"github.com/skinnykaen/rpa_clone/internal/models"
+	"github.com/skinnykaen/rpa_clone/pkg/logger"
 	"github.com/spf13/viper"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
+	"log"
+	"os"
+	"time"
 )
 
 type PostgresClient struct {
@@ -39,7 +38,7 @@ func InitPostgresClient(loggers logger.Loggers) (postgresClient PostgresClient, 
 		InfoLogger: loggers.Info,
 	}
 	if migrateErr := postgresClient.Migrate(); migrateErr != nil {
-		loggers.Err.Fatalf("Failed tomigrate: %s", migrateErr.Error())
+		loggers.Err.Fatalf("Failed to migrate: %s", migrateErr.Error())
 	}
 	return
 }
@@ -47,7 +46,22 @@ func InitPostgresClient(loggers logger.Loggers) (postgresClient PostgresClient, 
 func (c *PostgresClient) Migrate() (err error) {
 	err = c.Db.AutoMigrate(
 		&models.UserCore{},
+		&models.ProjectPageCore{},
+		&models.ProjectCore{},
 		&models.ParentRelCore{},
+		&models.SettingsCore{},
 	)
-	return
+	if err != nil {
+		return err
+	}
+	var count int64
+	if err := c.Db.First(&models.SettingsCore{ID: 1}).Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	} else {
+		return c.Db.Create(&models.SettingsCore{ID: 1, ActivationByLink: true}).Error
+	}
+	return nil
 }

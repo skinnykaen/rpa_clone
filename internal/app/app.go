@@ -1,16 +1,17 @@
 package app
 
 import (
+	"github.com/skinnykaen/rpa_clone/internal/configs"
+	"github.com/skinnykaen/rpa_clone/internal/consts"
+	"github.com/skinnykaen/rpa_clone/internal/db"
+	"github.com/skinnykaen/rpa_clone/internal/gateways"
+	"github.com/skinnykaen/rpa_clone/internal/server"
+	"github.com/skinnykaen/rpa_clone/internal/services"
+	resolvers "github.com/skinnykaen/rpa_clone/internal/transports/graphql"
+	"github.com/skinnykaen/rpa_clone/internal/transports/http"
+	"github.com/skinnykaen/rpa_clone/pkg/logger"
 	"go.uber.org/fx"
 	"log"
-	"rpa_clone/internal/configs"
-	"rpa_clone/internal/consts"
-	"rpa_clone/internal/db"
-	"rpa_clone/internal/gateways"
-	"rpa_clone/internal/server"
-	"rpa_clone/internal/services"
-	resolvers "rpa_clone/internal/transports/graphql"
-	"rpa_clone/pkg/logger"
 )
 
 func InvokeWith(m consts.Mode, options ...fx.Option) *fx.App {
@@ -24,6 +25,7 @@ func InvokeWith(m consts.Mode, options ...fx.Option) *fx.App {
 		fx.Provide(gateways.SetupGateways),
 		fx.Provide(services.SetupServices),
 		fx.Provide(resolvers.SetupResolvers),
+		fx.Provide(http.SetupHandlers),
 	}
 	for _, option := range options {
 		di = append(di, option)

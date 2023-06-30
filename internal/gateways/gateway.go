@@ -1,8 +1,8 @@
 package gateways
 
 import (
+	"github.com/skinnykaen/rpa_clone/internal/db"
 	"go.uber.org/fx"
-	"rpa_clone/internal/db"
 )
 
 type Gateways struct {
@@ -11,6 +11,7 @@ type Gateways struct {
 	ParentRel   ParentRel
 	Project     ProjectGateway
 	ProjectPage ProjectPageGateway
+	Settings    SettingsGateway
 }
 
 func SetupGateways(pc db.PostgresClient) Gateways {
@@ -19,5 +20,6 @@ func SetupGateways(pc db.PostgresClient) Gateways {
 		ParentRel:   ParentRelGatewayImpl{pc},
 		Project:     ProjectGatewayImpl{pc},
 		ProjectPage: ProjectPageGatewayImpl{pc},
+		Settings:    SettingsGatewayImpl{pc},
 	}
 }

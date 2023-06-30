@@ -1,8 +1,8 @@
 package configs
 
 import (
+	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/spf13/viper"
-	"rpa_clone/internal/consts"
 )
 
 func Init(m consts.Mode) error {
