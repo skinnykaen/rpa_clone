@@ -19,7 +19,7 @@ type ProjectPageCore struct {
 	Instruction   string      `gorm:"size:256;not null"`
 	Notes         string      `gorm:"size:256;not null"`
 	LinkToScratch string      `gorm:"size:256;not null"`
-	IsShared      bool
+	IsShared      bool        `gorm:"type:boolean;default:false;column:is_shared"`
 }
 
 func (p *ProjectPageHTTP) FromCore(projectPage ProjectPageCore) {

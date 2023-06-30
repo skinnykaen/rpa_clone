@@ -6,7 +6,6 @@ package resolvers
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	"github.com/skinnykaen/rpa_clone/internal/consts"
@@ -27,7 +26,26 @@ func (r *mutationResolver) CreateProjectPage(ctx context.Context) (*models.Proje
 
 // UpdateProjectPage is the resolver for the UpdateProjectPage field.
 func (r *mutationResolver) UpdateProjectPage(ctx context.Context, input models.UpdateProjectPage) (*models.ProjectPageHTTP, error) {
-	panic(fmt.Errorf("not implemented: UpdateProjectPage - UpdateProjectPage"))
+	atoi, err := strconv.Atoi(input.ID)
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, err
+	}
+	projectPage := models.ProjectPageCore{
+		ID:          uint(atoi),
+		Title:       input.Title,
+		Instruction: input.Instruction,
+		Notes:       input.Notes,
+		IsShared:    input.IsShared,
+	}
+	updatedProjectPage, err := r.projectPageService.UpdateProjectPage(projectPage, ctx.Value(consts.KeyId).(uint))
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, err
+	}
+	projectPageHttp := models.ProjectPageHTTP{}
+	projectPageHttp.FromCore(updatedProjectPage)
+	return &projectPageHttp, nil
 }
 
 // DeleteProjectPage is the resolver for the DeleteProjectPage field.

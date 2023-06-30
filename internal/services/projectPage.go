@@ -12,7 +12,7 @@ type ProjectPageService interface {
 	CreateProjectPage(authorId uint) (newProjectPage models.ProjectPageCore, err error)
 	DeleteProjectPage(id, clientId uint) error
 	GetAllProjectPages(page, pageSize *int, role models.Role, userId uint) (projectPages []models.ProjectPageCore, countRows uint, err error)
-	UpdateProjectPage(projectPage models.ProjectPageCore) (models.ProjectPageCore, error)
+	UpdateProjectPage(projectPage models.ProjectPageCore, clientId uint) (models.ProjectPageCore, error)
 	GetProjectPageById(id, clientId uint) (projectPage models.ProjectPageCore, err error)
 	GetProjectsPageByAuthorId(id uint, page, pageSize *int) (projectPages []models.ProjectPageCore, countRows uint, err error)
 }
@@ -54,8 +54,14 @@ func (p ProjectPageServiceImpl) DeleteProjectPage(id, clientId uint) error {
 	return p.projectPageGateway.DeleteProjectPage(id, clientId)
 }
 
-func (p ProjectPageServiceImpl) UpdateProjectPage(projectPage models.ProjectPageCore) (models.ProjectPageCore, error) {
-	//TODO check is author?
+func (p ProjectPageServiceImpl) UpdateProjectPage(projectPage models.ProjectPageCore, clientId uint) (models.ProjectPageCore, error) {
+	getProjectPage, err := p.projectPageGateway.GetProjectPageById(projectPage.ID)
+	if err != nil {
+		return models.ProjectPageCore{}, err
+	}
+	if clientId != getProjectPage.AuthorID {
+		return models.ProjectPageCore{}, errors.New("access denied")
+	}
 	return p.projectPageGateway.UpdateProjectPage(projectPage)
 }
 
