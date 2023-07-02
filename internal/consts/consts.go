@@ -1,10 +1,10 @@
 package consts
 
-type Mode uint8
+type Mode string
 
 const (
-	Production  Mode = 0
-	Development Mode = 1
+	Production  Mode = "production"
+	Development Mode = "development"
 )
 
 const (

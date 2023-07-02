@@ -21,7 +21,7 @@ func NewServer(
 	lifecycle fx.Lifecycle,
 	loggers logger.Loggers,
 	resolver resolvers.Resolver,
-	hanlers http2.Handlers,
+	handlers http2.Handlers,
 ) {
 	lifecycle.Append(
 		fx.Hook{
@@ -38,12 +38,17 @@ func NewServer(
 				case consts.Development:
 					mux.Handle("/", playground.Handler("GraphQL playground", "/query"))
 					mux.Handle("/query", Auth(srv, loggers.Err))
-					mux.Handle("/project", Auth(hanlers.ProjectHandler, loggers.Err))
+					mux.Handle("/project", Auth(handlers.ProjectHandler, loggers.Err))
 					break
 				}
-				loggers.Info.Printf("Connect to %s:%s/ for GraphQL playground",
+				loggers.Info.Printf(
+					"Connect to %s:%s/ for GraphQL playground",
 					viper.GetString("server_host"),
 					port,
+				)
+				loggers.Info.Printf(
+					"The app is running in %s mode",
+					m,
 				)
 				go func() {
 					loggers.Err.Fatal(http.ListenAndServe(":"+port, cors.New(
