@@ -35,5 +35,11 @@ func InvokeWith(m consts.Mode, options ...fx.Option) *fx.App {
 }
 
 func RunApp() {
+	if len(os.Args) < 2 ||
+		(consts.Mode(os.Args[1]) != consts.Development &&
+			consts.Mode(os.Args[1]) != consts.Production) {
+		log.Fatalf("%s", "app mode is not provided")
+		return
+	}
 	InvokeWith(consts.Mode(os.Args[1]), fx.Invoke(server.NewServer)).Run()
 }
