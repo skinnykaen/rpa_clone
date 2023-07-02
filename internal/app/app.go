@@ -12,6 +12,7 @@ import (
 	"github.com/skinnykaen/rpa_clone/pkg/logger"
 	"go.uber.org/fx"
 	"log"
+	"os"
 )
 
 func InvokeWith(m consts.Mode, options ...fx.Option) *fx.App {
@@ -34,5 +35,5 @@ func InvokeWith(m consts.Mode, options ...fx.Option) *fx.App {
 }
 
 func RunApp() {
-	InvokeWith(consts.Development, fx.Invoke(server.NewServer)).Run()
+	InvokeWith(consts.Mode(os.Args[1]), fx.Invoke(server.NewServer)).Run()
 }
