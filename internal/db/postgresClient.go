@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"github.com/skinnykaen/rpa_clone/internal/models"
 	"github.com/skinnykaen/rpa_clone/pkg/logger"
 	"github.com/spf13/viper"
@@ -19,6 +20,7 @@ type PostgresClient struct {
 
 func InitPostgresClient(loggers logger.Loggers) (postgresClient PostgresClient, err error) {
 	// TODO set stdout gorm logger depends on app mode
+	fmt.Println("init postgres")
 	gormLogger := gormLogger.New(
 		log.New(os.Stdout, "[GORM]\t", log.LstdFlags),
 		gormLogger.Config{
