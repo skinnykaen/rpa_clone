@@ -29,11 +29,9 @@ func InitLogger(m consts.Mode) (loggers Loggers) {
 
 		loggers.Info = log.New(infoF, "[INFO]\t", log.Ldate|log.Ltime)
 		loggers.Err = log.New(errF, "[ERROR]\t", log.Ldate|log.Ltime|log.Lshortfile)
-		break
 	case consts.Development:
 		loggers.Info = log.New(os.Stdout, "[INFO]\t", log.Ldate|log.Ltime)
 		loggers.Err = log.New(os.Stderr, "[ERROR]\t", log.Ldate|log.Ltime|log.Lshortfile)
-		break
 	}
 	loggers.Info.Print("Executing InitLogger.")
 	return

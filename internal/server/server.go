@@ -34,6 +34,7 @@ func NewServer(
 				switch m {
 				case consts.Production:
 					mux.Handle("/query", Auth(srv, loggers.Err))
+					mux.Handle("/project", Auth(handlers.ProjectHandler, loggers.Err))
 					break
 				case consts.Development:
 					mux.Handle("/", playground.Handler("GraphQL playground", "/query"))
