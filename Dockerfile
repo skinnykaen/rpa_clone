@@ -14,7 +14,7 @@ ADD go.sum ./
 
 RUN go mod download
 
-COPY . .
+COPY build .
 
 RUN go build -ldflags="-s -w" -o /app/build . cmd/main.go
 
