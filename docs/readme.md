@@ -1,5 +1,5 @@
 <b>build</b> 
-- docker compose --env-file ../configs/development.env up -d
+- docker compose --env-file ./configs/development.env up -d
 <b>run</b>
 - cd cmd & go run main.go development | production mode
 
