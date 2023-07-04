@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/models"
 	"github.com/skinnykaen/rpa_clone/internal/services"
@@ -25,21 +26,21 @@ func (p ProjectHandlerImpl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			projectId := r.URL.Query().Get("id")
+			r.URL.Query().Add("id", "555555")
+			fmt.Println(projectId)
 			atoi, err := strconv.Atoi(projectId)
 			if err != nil {
 				p.loggers.Err.Printf("%s", err.Error())
 				http.Error(w, "incorrect project id", http.StatusBadRequest)
 				return
 			}
-			clientId := r.Context().Value(consts.KeyId).(string)
-			clientIdAtoi, _ := strconv.Atoi(clientId)
-			project, err := p.projectService.GetProjectById(uint(atoi), uint(clientIdAtoi))
+			project, err := p.projectService.GetProjectById(uint(atoi), r.Context().Value(consts.KeyId).(uint))
 			if err != nil {
 				p.loggers.Err.Printf("%s", err.Error())
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			json, err := json.Marshal(project)
+			json, err := json.Marshal(project.Json)
 			if err != nil {
 				p.loggers.Err.Printf("%s", err.Error())
 				http.Error(w, err.Error(), http.StatusInternalServerError)
