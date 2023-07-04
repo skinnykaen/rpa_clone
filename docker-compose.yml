@@ -5,6 +5,8 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - postgres-db
+    expose:
+      - ${GRAPHQL_SERVER_PORT}
   postgres-db:
     container_name: postgres_db_rpa
     restart: always
