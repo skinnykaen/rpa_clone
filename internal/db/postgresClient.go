@@ -56,7 +56,9 @@ func (c *PostgresClient) Migrate() (err error) {
 	}
 	var count int64
 	if err := c.Db.First(&models.SettingsCore{ID: 1}).Count(&count).Error; err != nil {
-		return err
+		if err != gorm.ErrRecordNotFound {
+			return err
+		}
 	}
 	if count > 0 {
 		return nil
