@@ -1,7 +1,6 @@
 package db
 
 import (
-	"fmt"
 	"github.com/skinnykaen/rpa_clone/internal/models"
 	"github.com/skinnykaen/rpa_clone/pkg/logger"
 	"github.com/spf13/viper"
@@ -20,7 +19,6 @@ type PostgresClient struct {
 
 func InitPostgresClient(loggers logger.Loggers) (postgresClient PostgresClient, err error) {
 	// TODO set stdout gorm logger depends on app mode
-	fmt.Println("init postgres")
 	gormLogger := gormLogger.New(
 		log.New(os.Stdout, "[GORM]\t", log.LstdFlags),
 		gormLogger.Config{
@@ -42,7 +40,7 @@ func InitPostgresClient(loggers logger.Loggers) (postgresClient PostgresClient, 
 	if migrateErr := postgresClient.Migrate(); migrateErr != nil {
 		loggers.Err.Fatalf("Failed to migrate: %s", migrateErr.Error())
 	}
-	return
+	return postgresClient, err
 }
 
 func (c *PostgresClient) Migrate() (err error) {
@@ -58,7 +56,9 @@ func (c *PostgresClient) Migrate() (err error) {
 	}
 	var count int64
 	if err := c.Db.First(&models.SettingsCore{ID: 1}).Count(&count).Error; err != nil {
-		return err
+		if err != gorm.ErrRecordNotFound {
+			return err
+		}
 	}
 	if count > 0 {
 		return nil
