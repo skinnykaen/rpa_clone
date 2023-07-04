@@ -46,7 +46,7 @@ func (p ProjectHandlerImpl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			w.Header().Set("Content-Type", "application/json")
 			w.Write([]byte(project.Json))
-		case http.MethodPut:
+		case http.MethodPost:
 			dataBytes, err := io.ReadAll(r.Body)
 			if err != nil {
 				p.loggers.Err.Printf("%s", err.Error())
