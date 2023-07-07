@@ -128,7 +128,7 @@ func (a AuthServiceImpl) SignUp(newUser models.UserCore) error {
 	//TODO config path for activation
 	if activationByLink {
 		subject = "Ваша ссылка активации аккаунта"
-		body = "<p>Перейдите по ссылке http://localhost:5000/activation/" + fmt.Sprintf("%s", newUser.ActivationLink) +
+		body = "<p>Перейдите по ссылке http://92.255.79.9/activation/" + fmt.Sprintf("%s", newUser.ActivationLink) +
 			" для активации вашего аккаунта.</p>"
 	} else {
 		subject = "Активация аккаунта"
