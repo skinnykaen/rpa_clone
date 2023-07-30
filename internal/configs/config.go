@@ -9,7 +9,7 @@ func Init(m consts.Mode) error {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yml")
 	// TODO set config path
-	viper.AddConfigPath("configs")
+	viper.AddConfigPath("../configs")
 	err := viper.ReadInConfig()
 	if err != nil {
 		return err

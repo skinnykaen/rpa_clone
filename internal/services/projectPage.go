@@ -11,9 +11,9 @@ import (
 type ProjectPageService interface {
 	CreateProjectPage(authorId uint) (newProjectPage models.ProjectPageCore, err error)
 	DeleteProjectPage(id, clientId uint) error
-	GetAllProjectPages(page, pageSize *int, role models.Role, userId uint) (projectPages []models.ProjectPageCore, countRows uint, err error)
+	GetAllProjectPages(page, pageSize *int, userId uint, clientRole models.Role) (projectPages []models.ProjectPageCore, countRows uint, err error)
 	UpdateProjectPage(projectPage models.ProjectPageCore, clientId uint) (models.ProjectPageCore, error)
-	GetProjectPageById(id, clientId uint) (projectPage models.ProjectPageCore, err error)
+	GetProjectPageById(id, clientId uint, clientRole models.Role) (projectPage models.ProjectPageCore, err error)
 	GetProjectsPageByAuthorId(id uint, page, pageSize *int) (projectPages []models.ProjectPageCore, countRows uint, err error)
 }
 
@@ -22,9 +22,9 @@ type ProjectPageServiceImpl struct {
 	projectPageGateway gateways.ProjectPageGateway
 }
 
-func (p ProjectPageServiceImpl) GetAllProjectPages(page, pageSize *int, role models.Role, userId uint) (projectPages []models.ProjectPageCore, countRows uint, err error) {
+func (p ProjectPageServiceImpl) GetAllProjectPages(page, pageSize *int, userId uint, clientRole models.Role) (projectPages []models.ProjectPageCore, countRows uint, err error) {
 	offset, limit := utils.GetOffsetAndLimit(page, pageSize)
-	if role.String() != models.RoleSuperAdmin.String() {
+	if clientRole.String() != models.RoleSuperAdmin.String() {
 		return p.projectPageGateway.GetProjectPagesByAuthorId(userId, offset, limit)
 	}
 	return p.projectPageGateway.GetAllProjectPages(offset, limit)
@@ -65,12 +65,12 @@ func (p ProjectPageServiceImpl) UpdateProjectPage(projectPage models.ProjectPage
 	return p.projectPageGateway.UpdateProjectPage(projectPage)
 }
 
-func (p ProjectPageServiceImpl) GetProjectPageById(id, clientId uint) (projectPage models.ProjectPageCore, err error) {
+func (p ProjectPageServiceImpl) GetProjectPageById(id, clientId uint, clientRole models.Role) (projectPage models.ProjectPageCore, err error) {
 	projectPage, err = p.projectPageGateway.GetProjectPageById(id)
 	if err != nil {
 		return
 	}
-	if projectPage.IsShared {
+	if projectPage.IsShared || clientRole.String() == models.RoleSuperAdmin.String() {
 		return projectPage, nil
 	} else {
 		if projectPage.AuthorID != clientId {

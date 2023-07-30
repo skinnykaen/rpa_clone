@@ -69,7 +69,7 @@ func (r *queryResolver) GetProjectPageByID(ctx context.Context, id string) (*mod
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, err
 	}
-	project, err := r.projectPageService.GetProjectPageById(uint(atoi), ctx.Value(consts.KeyId).(uint))
+	project, err := r.projectPageService.GetProjectPageById(uint(atoi), ctx.Value(consts.KeyId).(uint), ctx.Value(consts.KeyRole).(models.Role))
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, err
@@ -95,7 +95,7 @@ func (r *queryResolver) GetAllProjectPagesByAuthorID(ctx context.Context, id str
 
 // GetAllProjectPagesByAccessToken is the resolver for the GetAllProjectPagesByAccessToken field.
 func (r *queryResolver) GetAllProjectPagesByAccessToken(ctx context.Context, page *int, pageSize *int) (*models.ProjectPageHTTPList, error) {
-	projects, countRows, err := r.projectPageService.GetAllProjectPages(page, pageSize, ctx.Value(consts.KeyRole).(models.Role), ctx.Value(consts.KeyId).(uint))
+	projects, countRows, err := r.projectPageService.GetAllProjectPages(page, pageSize, ctx.Value(consts.KeyId).(uint), ctx.Value(consts.KeyRole).(models.Role))
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, err

@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/models"
@@ -68,9 +69,17 @@ func (p ProjectHandlerImpl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
+			jData, err := json.Marshal(map[string]interface{}{
+				"Id": project.ID,
+			})
+			if err != nil {
+				p.loggers.Err.Printf("%s", err.Error())
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("Ok"))
+			w.Write(jData)
 		default:
 			http.Error(w, "not allowed method", http.StatusBadRequest)
 			return
