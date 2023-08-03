@@ -110,6 +110,7 @@ type ComplexityRoot struct {
 		DeleteUser          func(childComplexity int, id string) int
 		RefreshToken        func(childComplexity int, refreshToken string) int
 		SetActivationByLink func(childComplexity int, activationByLink bool) int
+		SetIsBanned         func(childComplexity int, projectPageID string, isBanned bool) int
 		SetUserIsActive     func(childComplexity int, id string, isActive bool) int
 		SignIn              func(childComplexity int, input models.SignIn) int
 		SignUp              func(childComplexity int, input models.SignUp) int
@@ -131,6 +132,7 @@ type ComplexityRoot struct {
 		CreatedAt        func(childComplexity int) int
 		ID               func(childComplexity int) int
 		Instruction      func(childComplexity int) int
+		IsBanned         func(childComplexity int) int
 		IsShared         func(childComplexity int) int
 		LinkToScratch    func(childComplexity int) int
 		Notes            func(childComplexity int) int
@@ -208,6 +210,7 @@ type MutationResolver interface {
 	CreateProjectPage(ctx context.Context) (*models.ProjectPageHTTP, error)
 	UpdateProjectPage(ctx context.Context, input models.UpdateProjectPage) (*models.ProjectPageHTTP, error)
 	DeleteProjectPage(ctx context.Context, id string) (*models.Response, error)
+	SetIsBanned(ctx context.Context, projectPageID string, isBanned bool) (*models.Response, error)
 	SetActivationByLink(ctx context.Context, activationByLink bool) (*models.Response, error)
 }
 type QueryResolver interface {
@@ -595,6 +598,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.SetActivationByLink(childComplexity, args["activationByLink"].(bool)), true
 
+	case "Mutation.SetIsBanned":
+		if e.complexity.Mutation.SetIsBanned == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_SetIsBanned_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SetIsBanned(childComplexity, args["projectPageId"].(string), args["isBanned"].(bool)), true
+
 	case "Mutation.SetUserIsActive":
 		if e.complexity.Mutation.SetUserIsActive == nil {
 			break
@@ -724,6 +739,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.ProjectPageHttp.Instruction(childComplexity), true
+
+	case "ProjectPageHttp.isBanned":
+		if e.complexity.ProjectPageHttp.IsBanned == nil {
+			break
+		}
+
+		return e.complexity.ProjectPageHttp.IsBanned(childComplexity), true
 
 	case "ProjectPageHttp.isShared":
 		if e.complexity.ProjectPageHttp.IsShared == nil {
@@ -1322,6 +1344,30 @@ func (ec *executionContext) field_Mutation_SetActivationByLink_args(ctx context.
 		}
 	}
 	args["activationByLink"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_SetIsBanned_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["projectPageId"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("projectPageId"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["projectPageId"] = arg0
+	var arg1 bool
+	if tmp, ok := rawArgs["isBanned"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("isBanned"))
+		arg1, err = ec.unmarshalNBoolean2bool(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["isBanned"] = arg1
 	return args, nil
 }
 
@@ -4110,6 +4156,8 @@ func (ec *executionContext) fieldContext_Mutation_CreateProjectPage(ctx context.
 				return ec.fieldContext_ProjectPageHttp_linkToScratch(ctx, field)
 			case "isShared":
 				return ec.fieldContext_ProjectPageHttp_isShared(ctx, field)
+			case "isBanned":
+				return ec.fieldContext_ProjectPageHttp_isBanned(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ProjectPageHttp", field.Name)
 		},
@@ -4202,6 +4250,8 @@ func (ec *executionContext) fieldContext_Mutation_UpdateProjectPage(ctx context.
 				return ec.fieldContext_ProjectPageHttp_linkToScratch(ctx, field)
 			case "isShared":
 				return ec.fieldContext_ProjectPageHttp_isShared(ctx, field)
+			case "isBanned":
+				return ec.fieldContext_ProjectPageHttp_isBanned(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ProjectPageHttp", field.Name)
 		},
@@ -4297,6 +4347,89 @@ func (ec *executionContext) fieldContext_Mutation_DeleteProjectPage(ctx context.
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_DeleteProjectPage_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_SetIsBanned(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_SetIsBanned(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().SetIsBanned(rctx, fc.Args["projectPageId"].(string), fc.Args["isBanned"].(bool))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin"})
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.HasRole == nil {
+				return nil, errors.New("directive hasRole is not implemented")
+			}
+			return ec.directives.HasRole(ctx, nil, directive0, roles)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*models.Response); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/skinnykaen/rpa_clone/internal/models.Response`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.Response)
+	fc.Result = res
+	return ec.marshalNResponse2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐResponse(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_SetIsBanned(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "ok":
+				return ec.fieldContext_Response_ok(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Response", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_SetIsBanned_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -5134,6 +5267,50 @@ func (ec *executionContext) fieldContext_ProjectPageHttp_isShared(ctx context.Co
 	return fc, nil
 }
 
+func (ec *executionContext) _ProjectPageHttp_isBanned(ctx context.Context, field graphql.CollectedField, obj *models.ProjectPageHTTP) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ProjectPageHttp_isBanned(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IsBanned, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ProjectPageHttp_isBanned(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProjectPageHttp",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ProjectPageHttpList_projectPages(ctx context.Context, field graphql.CollectedField, obj *models.ProjectPageHTTPList) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ProjectPageHttpList_projectPages(ctx, field)
 	if err != nil {
@@ -5195,6 +5372,8 @@ func (ec *executionContext) fieldContext_ProjectPageHttpList_projectPages(ctx co
 				return ec.fieldContext_ProjectPageHttp_linkToScratch(ctx, field)
 			case "isShared":
 				return ec.fieldContext_ProjectPageHttp_isShared(ctx, field)
+			case "isBanned":
+				return ec.fieldContext_ProjectPageHttp_isBanned(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ProjectPageHttp", field.Name)
 		},
@@ -6026,6 +6205,8 @@ func (ec *executionContext) fieldContext_Query_GetProjectPageById(ctx context.Co
 				return ec.fieldContext_ProjectPageHttp_linkToScratch(ctx, field)
 			case "isShared":
 				return ec.fieldContext_ProjectPageHttp_isShared(ctx, field)
+			case "isBanned":
+				return ec.fieldContext_ProjectPageHttp_isBanned(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ProjectPageHttp", field.Name)
 		},
@@ -9827,6 +10008,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "SetIsBanned":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_SetIsBanned(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "SetActivationByLink":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_SetActivationByLink(ctx, field)
@@ -9984,6 +10172,11 @@ func (ec *executionContext) _ProjectPageHttp(ctx context.Context, sel ast.Select
 			}
 		case "isShared":
 			out.Values[i] = ec._ProjectPageHttp_isShared(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "isBanned":
+			out.Values[i] = ec._ProjectPageHttp_isBanned(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

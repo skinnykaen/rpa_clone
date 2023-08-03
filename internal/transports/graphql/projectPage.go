@@ -62,6 +62,20 @@ func (r *mutationResolver) DeleteProjectPage(ctx context.Context, id string) (*m
 	return &models.Response{Ok: true}, nil
 }
 
+// SetIsBanned is the resolver for the SetIsBanned field.
+func (r *mutationResolver) SetIsBanned(ctx context.Context, projectPageID string, isBanned bool) (*models.Response, error) {
+	atoi, err := strconv.Atoi(projectPageID)
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, err
+	}
+	if err := r.projectPageService.SetIsBanned(uint(atoi), isBanned); err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, err
+	}
+	return &models.Response{Ok: true}, nil
+}
+
 // GetProjectPageByID is the resolver for the GetProjectPageById field.
 func (r *queryResolver) GetProjectPageByID(ctx context.Context, id string) (*models.ProjectPageHTTP, error) {
 	atoi, err := strconv.Atoi(id)

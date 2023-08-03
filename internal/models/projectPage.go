@@ -20,6 +20,7 @@ type ProjectPageCore struct {
 	Notes         string      `gorm:"size:256;not null"`
 	LinkToScratch string      `gorm:"size:256;not null"`
 	IsShared      bool        `gorm:"type:boolean;default:false;column:is_shared"`
+	IsBanned      bool        `gorm:"type:boolean;default:false;column:is_banned"`
 }
 
 func (p *ProjectPageHTTP) FromCore(projectPage ProjectPageCore) {
@@ -34,6 +35,7 @@ func (p *ProjectPageHTTP) FromCore(projectPage ProjectPageCore) {
 	p.Notes = projectPage.Notes
 	p.LinkToScratch = projectPage.LinkToScratch
 	p.IsShared = projectPage.IsShared
+	p.IsBanned = projectPage.IsBanned
 }
 
 func FromProjectPagesCore(projectPagesCore []ProjectPageCore) (projectPagesHttp []*ProjectPageHTTP) {

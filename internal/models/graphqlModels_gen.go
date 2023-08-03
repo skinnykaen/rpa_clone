@@ -93,6 +93,7 @@ type ProjectPageHTTP struct {
 	Notes            string `json:"notes"`
 	LinkToScratch    string `json:"linkToScratch"`
 	IsShared         bool   `json:"isShared"`
+	IsBanned         bool   `json:"isBanned"`
 }
 
 type ProjectPageHTTPList struct {

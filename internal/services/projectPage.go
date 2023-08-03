@@ -15,11 +15,20 @@ type ProjectPageService interface {
 	UpdateProjectPage(projectPage models.ProjectPageCore, clientId uint) (models.ProjectPageCore, error)
 	GetProjectPageById(id, clientId uint, clientRole models.Role) (projectPage models.ProjectPageCore, err error)
 	GetProjectsPageByAuthorId(id uint, page, pageSize *int) (projectPages []models.ProjectPageCore, countRows uint, err error)
+	SetIsBanned(id uint, isBanned bool) error
 }
+
+const (
+	ErrProjectPageIsBanned = "the projectPage is banned. no access"
+)
 
 type ProjectPageServiceImpl struct {
 	projectGateway     gateways.ProjectGateway
 	projectPageGateway gateways.ProjectPageGateway
+}
+
+func (p ProjectPageServiceImpl) SetIsBanned(id uint, isBanned bool) error {
+	return p.projectPageGateway.SetIsBanned(id, isBanned)
 }
 
 func (p ProjectPageServiceImpl) GetAllProjectPages(page, pageSize *int, userId uint, clientRole models.Role) (projectPages []models.ProjectPageCore, countRows uint, err error) {
@@ -70,6 +79,13 @@ func (p ProjectPageServiceImpl) GetProjectPageById(id, clientId uint, clientRole
 	if err != nil {
 		return
 	}
+	// если проект забанен по решению супер админа, то доступ имеет только супер админ
+	if projectPage.IsBanned && clientRole.String() == models.RoleSuperAdmin.String() {
+		return projectPage, nil
+	} else if projectPage.IsBanned {
+		return models.ProjectPageCore{}, errors.New(ErrProjectPageIsBanned)
+	}
+	// проверка доступа к проекту. супер админу всегда имеет доступ к проекту
 	if projectPage.IsShared || clientRole.String() == models.RoleSuperAdmin.String() {
 		return projectPage, nil
 	} else {

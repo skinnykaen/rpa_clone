@@ -25,6 +25,12 @@ func (p ProjectServiceImpl) GetProjectById(id, clientId uint, clientRole models.
 	if err != nil {
 		return models.ProjectCore{}, err
 	}
+	// если проект забанен по решению супер админа, то доступ имеет только супер админ
+	if project.IsBanned && clientRole.String() == models.RoleSuperAdmin.String() {
+		return project, nil
+	} else if project.IsBanned {
+		return models.ProjectCore{}, errors.New(ErrProjectPageIsBanned)
+	}
 	if project.IsShared || clientRole.String() == models.RoleSuperAdmin.String() {
 		return project, nil
 	} else {
