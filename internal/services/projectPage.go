@@ -1,11 +1,11 @@
 package services
 
 import (
-	"errors"
 	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/gateways"
 	"github.com/skinnykaen/rpa_clone/internal/models"
 	"github.com/skinnykaen/rpa_clone/pkg/utils"
+	"net/http"
 )
 
 type ProjectPageService interface {
@@ -17,10 +17,6 @@ type ProjectPageService interface {
 	GetProjectsPageByAuthorId(id uint, page, pageSize *int) (projectPages []models.ProjectPageCore, countRows uint, err error)
 	SetIsBanned(id uint, isBanned bool) error
 }
-
-const (
-	ErrProjectPageIsBanned = "the projectPage is banned. no access"
-)
 
 type ProjectPageServiceImpl struct {
 	projectGateway     gateways.ProjectGateway
@@ -66,10 +62,16 @@ func (p ProjectPageServiceImpl) DeleteProjectPage(id, clientId uint) error {
 func (p ProjectPageServiceImpl) UpdateProjectPage(projectPage models.ProjectPageCore, clientId uint) (models.ProjectPageCore, error) {
 	getProjectPage, err := p.projectPageGateway.GetProjectPageById(projectPage.ID)
 	if err != nil {
-		return models.ProjectPageCore{}, err
+		return models.ProjectPageCore{}, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
 	}
 	if clientId != getProjectPage.AuthorID {
-		return models.ProjectPageCore{}, errors.New("access denied")
+		return models.ProjectPageCore{}, utils.ResponseError{
+			Code:    http.StatusForbidden,
+			Message: consts.ErrAccessDenied,
+		}
 	}
 	return p.projectPageGateway.UpdateProjectPage(projectPage)
 }
@@ -77,20 +79,26 @@ func (p ProjectPageServiceImpl) UpdateProjectPage(projectPage models.ProjectPage
 func (p ProjectPageServiceImpl) GetProjectPageById(id, clientId uint, clientRole models.Role) (projectPage models.ProjectPageCore, err error) {
 	projectPage, err = p.projectPageGateway.GetProjectPageById(id)
 	if err != nil {
-		return
+		return projectPage, err
 	}
 	// если проект забанен по решению супер админа, то доступ имеет только супер админ
 	if projectPage.IsBanned && clientRole.String() == models.RoleSuperAdmin.String() {
 		return projectPage, nil
 	} else if projectPage.IsBanned {
-		return models.ProjectPageCore{}, errors.New(ErrProjectPageIsBanned)
+		return models.ProjectPageCore{}, utils.ResponseError{
+			Code:    http.StatusForbidden,
+			Message: consts.ErrProjectPageIsBanned,
+		}
 	}
 	// проверка доступа к проекту. супер админу всегда имеет доступ к проекту
 	if projectPage.IsShared || clientRole.String() == models.RoleSuperAdmin.String() {
 		return projectPage, nil
 	} else {
 		if projectPage.AuthorID != clientId {
-			return models.ProjectPageCore{}, errors.New("access denied")
+			return models.ProjectPageCore{}, utils.ResponseError{
+				Code:    http.StatusForbidden,
+				Message: consts.ErrAccessDenied,
+			}
 		}
 	}
 	return projectPage, nil

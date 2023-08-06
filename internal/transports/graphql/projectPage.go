@@ -6,6 +6,8 @@ package resolvers
 
 import (
 	"context"
+	"github.com/skinnykaen/rpa_clone/pkg/utils"
+	"net/http"
 	"strconv"
 
 	"github.com/skinnykaen/rpa_clone/internal/consts"
@@ -29,7 +31,10 @@ func (r *mutationResolver) UpdateProjectPage(ctx context.Context, input models.U
 	atoi, err := strconv.Atoi(input.ID)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, utils.ResponseError{
+			Code:    http.StatusBadRequest,
+			Message: consts.ErrAtoi,
+		}
 	}
 	projectPage := models.ProjectPageCore{
 		ID:          uint(atoi),
@@ -53,7 +58,10 @@ func (r *mutationResolver) DeleteProjectPage(ctx context.Context, id string) (*m
 	atoi, err := strconv.Atoi(id)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, utils.ResponseError{
+			Code:    http.StatusBadRequest,
+			Message: consts.ErrAtoi,
+		}
 	}
 	if r.projectPageService.DeleteProjectPage(uint(atoi), ctx.Value(consts.KeyId).(uint)); err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
@@ -67,7 +75,10 @@ func (r *mutationResolver) SetIsBanned(ctx context.Context, projectPageID string
 	atoi, err := strconv.Atoi(projectPageID)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, utils.ResponseError{
+			Code:    http.StatusBadRequest,
+			Message: consts.ErrAtoi,
+		}
 	}
 	if err := r.projectPageService.SetIsBanned(uint(atoi), isBanned); err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
@@ -81,7 +92,10 @@ func (r *queryResolver) GetProjectPageByID(ctx context.Context, id string) (*mod
 	atoi, err := strconv.Atoi(id)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, utils.ResponseError{
+			Code:    http.StatusBadRequest,
+			Message: consts.ErrAtoi,
+		}
 	}
 	project, err := r.projectPageService.GetProjectPageById(uint(atoi), ctx.Value(consts.KeyId).(uint), ctx.Value(consts.KeyRole).(models.Role))
 	if err != nil {
@@ -96,6 +110,13 @@ func (r *queryResolver) GetProjectPageByID(ctx context.Context, id string) (*mod
 // GetAllProjectPagesByAuthorID is the resolver for the GetAllProjectPagesByAuthorId field.
 func (r *queryResolver) GetAllProjectPagesByAuthorID(ctx context.Context, id string, page *int, pageSize *int) (*models.ProjectPageHTTPList, error) {
 	atoi, err := strconv.Atoi(id)
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, utils.ResponseError{
+			Code:    http.StatusBadRequest,
+			Message: consts.ErrAtoi,
+		}
+	}
 	projects, countRows, err := r.projectPageService.GetProjectsPageByAuthorId(uint(atoi), page, pageSize)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())

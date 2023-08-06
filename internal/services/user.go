@@ -1,10 +1,11 @@
 package services
 
 import (
-	"errors"
+	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/gateways"
 	"github.com/skinnykaen/rpa_clone/internal/models"
 	"github.com/skinnykaen/rpa_clone/pkg/utils"
+	"net/http"
 )
 
 type UserService interface {
@@ -31,7 +32,10 @@ func (u UserServiceImpl) CreateUser(user models.UserCore, clientRole models.Role
 	// checking the client role for the possibility of creating a user
 	if (clientRole == models.RoleUnitAdmin && user.Role.String() == models.RoleUnitAdmin.String()) ||
 		user.Role.String() == models.RoleSuperAdmin.String() {
-		return models.UserCore{}, errors.New("access denied")
+		return models.UserCore{}, utils.ResponseError{
+			Code:    http.StatusForbidden,
+			Message: consts.ErrAccessDenied,
+		}
 	}
 
 	exist, err := u.userGateway.DoesExistEmail(0, user.Email)
@@ -39,10 +43,16 @@ func (u UserServiceImpl) CreateUser(user models.UserCore, clientRole models.Role
 		return models.UserCore{}, err
 	}
 	if exist {
-		return models.UserCore{}, errors.New("email already in use")
+		return models.UserCore{}, utils.ResponseError{
+			Code:    http.StatusBadRequest,
+			Message: consts.ErrEmailAlreadyInUse,
+		}
 	}
 	if len(user.Password) < 6 {
-		return models.UserCore{}, errors.New("please input password, at least 6 symbols")
+		return models.UserCore{}, utils.ResponseError{
+			Code:    http.StatusBadRequest,
+			Message: consts.ErrShortPassword,
+		}
 	}
 	passwordHash := utils.HashPassword(user.Password)
 	user.Password = passwordHash
@@ -60,30 +70,45 @@ func (u UserServiceImpl) UpdateUser(user models.UserCore, clientRole models.Role
 	// TODO check client role
 	// какие роли кого могут обновлять
 	exist, err := u.userGateway.DoesExistEmail(user.ID, user.Email)
+	if err != nil {
+		return models.UserCore{}, err
+	}
 	// checking the client role for the possibility of updating a user
 	switch clientRole {
 	case models.RoleUnitAdmin:
 		if user.Role.String() == models.RoleSuperAdmin.String() {
-			return models.UserCore{}, errors.New("access denied")
+			return models.UserCore{}, utils.ResponseError{
+				Code:    http.StatusForbidden,
+				Message: consts.ErrAccessDenied,
+			}
 		}
 	case models.RoleTeacher:
 		if user.Role.String() != models.RoleTeacher.String() {
-			return models.UserCore{}, errors.New("access denied")
+			return models.UserCore{}, utils.ResponseError{
+				Code:    http.StatusForbidden,
+				Message: consts.ErrAccessDenied,
+			}
 		}
 	case models.RoleParent:
 		if user.Role.String() != models.RoleParent.String() {
-			return models.UserCore{}, errors.New("access denied")
+			return models.UserCore{}, utils.ResponseError{
+				Code:    http.StatusForbidden,
+				Message: consts.ErrAccessDenied,
+			}
 		}
 	case models.RoleStudent:
 		if user.Role.String() != models.RoleStudent.String() {
-			return models.UserCore{}, errors.New("access denied")
+			return models.UserCore{}, utils.ResponseError{
+				Code:    http.StatusForbidden,
+				Message: consts.ErrAccessDenied,
+			}
 		}
 	}
-	if err != nil {
-		return models.UserCore{}, err
-	}
 	if exist {
-		return models.UserCore{}, errors.New("email already in use")
+		return models.UserCore{}, utils.ResponseError{
+			Code:    http.StatusForbidden,
+			Message: consts.ErrEmailAlreadyInUse,
+		}
 	}
 	return u.userGateway.UpdateUser(user)
 }
@@ -97,20 +122,26 @@ func (u UserServiceImpl) GetUserById(id uint, clientRole models.Role) (models.Us
 	switch clientRole {
 	case models.RoleParent:
 		if user.Role.String() != models.RoleStudent.String() {
-			return models.UserCore{}, errors.New("access denied")
+			return models.UserCore{}, utils.ResponseError{
+				Code:    http.StatusForbidden,
+				Message: consts.ErrAccessDenied,
+			}
 		}
-		break
 	case models.RoleTeacher:
 		if user.Role.String() == models.RoleUnitAdmin.String() ||
 			user.Role.String() == models.RoleSuperAdmin.String() {
-			return models.UserCore{}, errors.New("access denied")
+			return models.UserCore{}, utils.ResponseError{
+				Code:    http.StatusForbidden,
+				Message: consts.ErrAccessDenied,
+			}
 		}
-		break
 	case models.RoleUnitAdmin:
 		if user.Role.String() == models.RoleSuperAdmin.String() {
-			return models.UserCore{}, errors.New("access denied")
+			return models.UserCore{}, utils.ResponseError{
+				Code:    http.StatusForbidden,
+				Message: consts.ErrAccessDenied,
+			}
 		}
-		break
 	}
 	return user, nil
 }
@@ -126,7 +157,10 @@ func (u UserServiceImpl) GetAllUsers(
 	case models.RoleUnitAdmin:
 		for _, role := range roles {
 			if role.String() == models.RoleSuperAdmin.String() || role.String() == models.RoleUnitAdmin.String() {
-				return []models.UserCore{}, 0, errors.New("access denied")
+				return []models.UserCore{}, 0, utils.ResponseError{
+					Code:    http.StatusForbidden,
+					Message: consts.ErrAccessDenied,
+				}
 			}
 		}
 	}

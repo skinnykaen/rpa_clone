@@ -2,8 +2,11 @@ package services
 
 import (
 	"errors"
+	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/gateways"
 	"github.com/skinnykaen/rpa_clone/internal/models"
+	"github.com/skinnykaen/rpa_clone/pkg/utils"
+	"net/http"
 )
 
 type ProjectService interface {
@@ -29,14 +32,17 @@ func (p ProjectServiceImpl) GetProjectById(id, clientId uint, clientRole models.
 	if project.IsBanned && clientRole.String() == models.RoleSuperAdmin.String() {
 		return project, nil
 	} else if project.IsBanned {
-		return models.ProjectCore{}, errors.New(ErrProjectPageIsBanned)
+		return models.ProjectCore{}, errors.New(consts.ErrProjectPageIsBanned)
 	}
 	if project.IsShared || clientRole.String() == models.RoleSuperAdmin.String() {
 		return project, nil
 	} else {
 		if project.AuthorID != clientId {
-			return models.ProjectCore{}, errors.New("access denied")
+			return models.ProjectCore{}, utils.ResponseError{
+				Code:    http.StatusForbidden,
+				Message: consts.ErrAccessDenied,
+			}
 		}
 	}
-	return
+	return project, nil
 }

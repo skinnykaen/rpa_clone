@@ -1,11 +1,12 @@
 package gateways
 
 import (
-	"errors"
-	"fmt"
+	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/db"
 	"github.com/skinnykaen/rpa_clone/internal/models"
+	"github.com/skinnykaen/rpa_clone/pkg/utils"
 	"gorm.io/gorm/clause"
+	"net/http"
 )
 
 type ProjectGateway interface {
@@ -21,8 +22,13 @@ type ProjectGatewayImpl struct {
 }
 
 func (p ProjectGatewayImpl) GetProjectsByAuthorId(id uint) (projects []models.ProjectCore, err error) {
-	err = p.postgresClient.Db.Where("author_id = ?", id).Find(&projects).Error
-	return
+	if err := p.postgresClient.Db.Where("author_id = ?", id).Find(&projects).Error; err != nil {
+		return []models.ProjectCore{}, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
+	}
+	return projects, nil
 }
 
 func (p ProjectGatewayImpl) CreateProject(project models.ProjectCore) (models.ProjectCore, error) {
@@ -34,9 +40,11 @@ func (p ProjectGatewayImpl) DeleteProject(id, clientId uint) error {
 	result := p.postgresClient.Db.Unscoped().Where("author_id = ?", clientId).Delete(&models.ProjectCore{ID: id})
 	var countRows int
 	result.Row().Scan(&countRows)
-	fmt.Println(countRows)
 	if countRows == 0 && result.Error == nil {
-		return errors.New("access denied")
+		return utils.ResponseError{
+			Code:    http.StatusBadRequest,
+			Message: consts.ErrNotFoundInDB,
+		}
 	}
 	return result.Error
 }
@@ -47,6 +55,11 @@ func (p ProjectGatewayImpl) UpdateProject(project models.ProjectCore) (updatedPr
 }
 
 func (p ProjectGatewayImpl) GetProjectById(id uint) (project models.ProjectCore, err error) {
-	err = p.postgresClient.Db.First(&project, id).Error
-	return
+	if err := p.postgresClient.Db.First(&project, id).Error; err != nil {
+		return models.ProjectCore{}, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
+	}
+	return project, nil
 }

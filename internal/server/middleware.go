@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 )
 
 func Auth(next http.Handler, errLogger *log.Logger) http.Handler {
@@ -31,12 +32,17 @@ func Auth(next http.Handler, errLogger *log.Logger) http.Handler {
 			func(token *jwt.Token) (interface{}, error) {
 				return []byte(viper.GetString("auth_access_signing_key")), nil
 			})
+		claims, ok := data.Claims.(*services.UserClaims)
 		if err != nil {
+			if claims.ExpiresAt.Unix() < time.Now().Unix() {
+				errLogger.Printf("%s", err.Error())
+				http.Error(w, "token expired", http.StatusUnauthorized)
+				return
+			}
 			errLogger.Printf("%s", err.Error())
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
-		claims, ok := data.Claims.(*services.UserClaims)
 		if !ok {
 			errLogger.Printf("%s", "token claims are not of type *StandardClaims")
 			http.Error(w, "token claims are not of type *StandardClaims", http.StatusUnauthorized)

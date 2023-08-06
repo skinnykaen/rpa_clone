@@ -28,7 +28,7 @@ func (p ProjectHandlerImpl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			atoi, err := strconv.Atoi(projectId)
 			if err != nil {
 				p.loggers.Err.Printf("%s", err.Error())
-				http.Error(w, "incorrect project id", http.StatusBadRequest)
+				http.Error(w, consts.ErrAtoi, http.StatusBadRequest)
 				return
 			}
 			project, err := p.projectService.GetProjectById(uint(atoi), r.Context().Value(consts.KeyId).(uint), r.Context().Value(consts.KeyRole).(models.Role))
@@ -54,7 +54,7 @@ func (p ProjectHandlerImpl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			projectId := r.URL.Query().Get("id")
 			atoi, err := strconv.Atoi(projectId)
 			if err != nil {
-				http.Error(w, "incorrect project id", http.StatusBadRequest)
+				http.Error(w, consts.ErrAtoi, http.StatusBadRequest)
 				return
 			}
 			project := models.ProjectCore{}

@@ -22,8 +22,7 @@ func SendEmail(subject, to, body string) (err error) {
 	e.HTML = []byte(body)
 
 	auth := smtp.PlainAuth("", from, pass, viper.GetString("smtp_server_host"))
-	err = e.Send(viper.GetString("smtp_server_address"), auth)
-	return
+	return e.Send(viper.GetString("smtp_server_address"), auth)
 }
 
 func HashPassword(s string) string {

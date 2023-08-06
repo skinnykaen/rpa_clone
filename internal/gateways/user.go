@@ -2,10 +2,13 @@ package gateways
 
 import (
 	"errors"
+	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/db"
 	"github.com/skinnykaen/rpa_clone/internal/models"
+	"github.com/skinnykaen/rpa_clone/pkg/utils"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"net/http"
 )
 
 type UserGateway interface {
@@ -33,7 +36,16 @@ func (u UserGatewayImpl) GetUserByActivationLink(link string) (user models.UserC
 
 func (u UserGatewayImpl) GetUserByEmail(email string) (user models.UserCore, err error) {
 	if err = u.postgresClient.Db.Where("email = ?", email).Take(&user).Error; err != nil {
-		return user, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return user, utils.ResponseError{
+				Code:    http.StatusBadRequest,
+				Message: consts.ErrIncorrectPasswordOrEmail,
+			}
+		}
+		return user, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
 	}
 	return user, nil
 }
@@ -60,14 +72,23 @@ func (u UserGatewayImpl) DoesExistEmail(id uint, email string) (bool, error) {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return false, nil
 		}
-		return false, result.Error
+		return false, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: result.Error.Error(),
+		}
 	}
 	return true, nil
 }
 
 func (u UserGatewayImpl) CreateUser(user models.UserCore) (newUser models.UserCore, err error) {
 	result := u.postgresClient.Db.Create(&user).Clauses(clause.Returning{})
-	return user, result.Error
+	if result.Error != nil {
+		return models.UserCore{}, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: result.Error.Error(),
+		}
+	}
+	return user, nil
 }
 
 func (u UserGatewayImpl) DeleteUser(id uint) (err error) {
@@ -75,7 +96,7 @@ func (u UserGatewayImpl) DeleteUser(id uint) (err error) {
 }
 
 func (u UserGatewayImpl) UpdateUser(user models.UserCore) (models.UserCore, error) {
-	err := u.postgresClient.Db.Model(&user).Clauses(clause.Returning{}).
+	if err := u.postgresClient.Db.Model(&user).Clauses(clause.Returning{}).
 		Take(&models.UserCore{}, user.ID).
 		Updates(map[string]interface{}{
 			"email":      user.Email,
@@ -83,13 +104,23 @@ func (u UserGatewayImpl) UpdateUser(user models.UserCore) (models.UserCore, erro
 			"lastname":   user.Lastname,
 			"middlename": user.Middlename,
 			"nickname":   user.Nickname,
-		}).Error
-	return user, err
+		}).Error; err != nil {
+		return models.UserCore{}, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
+	}
+	return user, nil
 }
 
 func (u UserGatewayImpl) GetUserById(id uint) (user models.UserCore, err error) {
-	err = u.postgresClient.Db.First(&user, id).Error
-	return
+	if err := u.postgresClient.Db.First(&user, id).Error; err != nil {
+		return models.UserCore{}, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
+	}
+	return user, nil
 }
 
 func (u UserGatewayImpl) GetAllUsers(
@@ -109,7 +140,10 @@ func (u UserGatewayImpl) GetAllUsers(
 	result := u.postgresClient.Db.Limit(limit).Offset(offset).
 		Where("is_active = ? AND (role) IN ?", isActive, role).Find(&users)
 	if result.Error != nil {
-		return []models.UserCore{}, 0, result.Error
+		return []models.UserCore{}, 0, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: result.Error.Error(),
+		}
 	}
 	result.Count(&count)
 	return users, uint(count), result.Error

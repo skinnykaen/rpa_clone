@@ -6,6 +6,8 @@ package resolvers
 
 import (
 	"context"
+	"github.com/skinnykaen/rpa_clone/pkg/utils"
+	"net/http"
 
 	"github.com/skinnykaen/rpa_clone/internal/models"
 )
@@ -14,7 +16,10 @@ import (
 func (r *mutationResolver) SetActivationByLink(ctx context.Context, activationByLink bool) (*models.Response, error) {
 	if err := r.settingsService.SetActivationByLink(activationByLink); err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
 	}
 	return &models.Response{
 		Ok: true,
@@ -26,7 +31,10 @@ func (r *queryResolver) GetSettings(ctx context.Context) (*models.Settings, erro
 	activationLink, err := r.settingsService.GetActivationByLink()
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
 	}
 	return &models.Settings{
 		ActivationByLink: activationLink,

@@ -3,9 +3,11 @@ package gateways
 import (
 	"github.com/skinnykaen/rpa_clone/internal/db"
 	"github.com/skinnykaen/rpa_clone/internal/models"
+	"github.com/skinnykaen/rpa_clone/pkg/utils"
 	"github.com/spf13/viper"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"net/http"
 	"strconv"
 )
 
@@ -29,16 +31,25 @@ func (p ProjectPageGatewayImpl) SetIsBanned(id uint, isBanned bool) error {
 		if err := p.postgresClient.Db.First(&models.ProjectPageCore{ID: id}).Updates(map[string]interface{}{
 			"is_banned": isBanned},
 		).Error; err != nil {
-			return err
+			return utils.ResponseError{
+				Code:    http.StatusInternalServerError,
+				Message: err.Error(),
+			}
 		}
 		if err := p.postgresClient.Db.First(&models.ProjectCore{ID: id}).Updates(map[string]interface{}{
 			"is_banned": isBanned},
 		).Error; err != nil {
-			return err
+			return utils.ResponseError{
+				Code:    http.StatusInternalServerError,
+				Message: err.Error(),
+			}
 		}
 		return nil
 	}); err != nil {
-		return err
+		return utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
 	}
 	return nil
 }
@@ -48,7 +59,10 @@ func (p ProjectPageGatewayImpl) GetProjectPagesByAuthorId(id uint, offset, limit
 	result := p.postgresClient.Db.Limit(limit).Offset(offset).Where("author_id = ? AND is_banned = ?", id, false).
 		Find(&projectPages).Preload("Project")
 	if result.Error != nil {
-		return []models.ProjectPageCore{}, 0, result.Error
+		return []models.ProjectPageCore{}, 0, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: result.Error.Error(),
+		}
 	}
 	result.Count(&count)
 	return projectPages, uint(count), result.Error
@@ -58,7 +72,10 @@ func (p ProjectPageGatewayImpl) GetAllProjectPages(offset, limit int) (projectPa
 	var count int64
 	result := p.postgresClient.Db.Limit(limit).Offset(offset).Find(&projectPages).Preload("Project")
 	if result.Error != nil {
-		return []models.ProjectPageCore{}, 0, result.Error
+		return []models.ProjectPageCore{}, 0, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: result.Error.Error(),
+		}
 	}
 	result.Count(&count)
 	return projectPages, uint(count), result.Error
@@ -71,17 +88,26 @@ func (p ProjectPageGatewayImpl) SetIsShared(id uint, isShared bool) error {
 func (p ProjectPageGatewayImpl) CreateProjectPage(projectPage models.ProjectPageCore, project models.ProjectCore) (models.ProjectPageCore, error) {
 	if err := p.postgresClient.Db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&project).Clauses(clause.Returning{}).Error; err != nil {
-			return err
+			return utils.ResponseError{
+				Code:    http.StatusInternalServerError,
+				Message: err.Error(),
+			}
 		}
 		projectPage.Project = project
 		projectPage.LinkToScratch = viper.GetString("projectPage.scratchLink") +
 			"?#" + strconv.FormatUint(uint64(project.ID), 10)
 		if err := tx.Create(&projectPage).Clauses(clause.Returning{}).Error; err != nil {
-			return err
+			return utils.ResponseError{
+				Code:    http.StatusInternalServerError,
+				Message: err.Error(),
+			}
 		}
 		return nil
 	}); err != nil {
-		return models.ProjectPageCore{}, err
+		return models.ProjectPageCore{}, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
 	}
 	return projectPage, nil
 }
@@ -89,14 +115,23 @@ func (p ProjectPageGatewayImpl) CreateProjectPage(projectPage models.ProjectPage
 func (p ProjectPageGatewayImpl) DeleteProjectPage(id, clientId uint) error {
 	if err := p.postgresClient.Db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("author_id = ?", clientId).Delete(&models.ProjectCore{}, id).Error; err != nil {
-			return err
+			return utils.ResponseError{
+				Code:    http.StatusInternalServerError,
+				Message: err.Error(),
+			}
 		}
 		if err := tx.Where("author_id = ?", clientId).Delete(&models.ProjectPageCore{}, id).Error; err != nil {
-			return err
+			return utils.ResponseError{
+				Code:    http.StatusInternalServerError,
+				Message: err.Error(),
+			}
 		}
 		return nil
 	}); err != nil {
-		return err
+		return utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
 	}
 	return nil
 }
@@ -113,7 +148,10 @@ func (p ProjectPageGatewayImpl) UpdateProjectPage(projectPage models.ProjectPage
 					"is_shared":       projectPage.IsShared,
 				},
 			).Error; err != nil {
-			return err
+			return utils.ResponseError{
+				Code:    http.StatusInternalServerError,
+				Message: err.Error(),
+			}
 		}
 		if err := tx.Model(&models.ProjectCore{}).Clauses(clause.Returning{}).Take(&models.ProjectCore{}, projectPage.ID).
 			Updates(
@@ -121,14 +159,26 @@ func (p ProjectPageGatewayImpl) UpdateProjectPage(projectPage models.ProjectPage
 					"is_shared": projectPage.IsShared,
 				},
 			).Error; err != nil {
-			return err
+			return utils.ResponseError{
+				Code:    http.StatusInternalServerError,
+				Message: err.Error(),
+			}
 		}
 		return nil
 	})
+	if err != nil {
+		return models.ProjectPageCore{}, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
+	}
 	return updatedProjectPage, nil
 }
 
 func (p ProjectPageGatewayImpl) GetProjectPageById(id uint) (projectPage models.ProjectPageCore, err error) {
 	err = p.postgresClient.Db.Model(&models.ProjectPageCore{}).Preload("Project").First(&projectPage, id).Error
-	return
+	return projectPage, utils.ResponseError{
+		Code:    http.StatusInternalServerError,
+		Message: err.Error(),
+	}
 }

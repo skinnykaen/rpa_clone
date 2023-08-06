@@ -6,6 +6,8 @@ package resolvers
 
 import (
 	"context"
+	"github.com/skinnykaen/rpa_clone/pkg/utils"
+	"net/http"
 	"strconv"
 
 	"github.com/skinnykaen/rpa_clone/graph"
@@ -40,7 +42,10 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, input models.UpdateUs
 	atoi, err := strconv.Atoi(input.ID)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, utils.ResponseError{
+			Code:    http.StatusBadRequest,
+			Message: consts.ErrAtoi,
+		}
 	}
 	// TODO not required field
 	user := models.UserCore{
@@ -66,12 +71,18 @@ func (r *mutationResolver) DeleteUser(ctx context.Context, id string) (*models.R
 	atoi, err := strconv.Atoi(id)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, utils.ResponseError{
+			Code:    http.StatusBadRequest,
+			Message: consts.ErrAtoi,
+		}
 	}
 	err = r.userService.DeleteUser(uint(atoi))
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
 	}
 	return &models.Response{Ok: true}, nil
 }
@@ -81,11 +92,17 @@ func (r *mutationResolver) SetUserIsActive(ctx context.Context, id string, isAct
 	atoi, err := strconv.Atoi(id)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, utils.ResponseError{
+			Code:    http.StatusBadRequest,
+			Message: consts.ErrAtoi,
+		}
 	}
 	if r.userService.SetIsActive(uint(atoi), isActive); err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
 	}
 	return &models.Response{Ok: true}, nil
 }
@@ -107,7 +124,10 @@ func (r *queryResolver) GetUserByID(ctx context.Context, id string) (*models.Use
 	atoi, err := strconv.Atoi(id)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, utils.ResponseError{
+			Code:    http.StatusBadRequest,
+			Message: consts.ErrAtoi,
+		}
 	}
 	user, err := r.userService.GetUserById(uint(atoi), ctx.Value(consts.KeyRole).(models.Role))
 	if err != nil {
