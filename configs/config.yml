@@ -42,3 +42,4 @@ cors:
 logger:
   info: "./logs/info.log"
   error: "./logs/error.log"
+  gorm: "./logs/gorm.log"

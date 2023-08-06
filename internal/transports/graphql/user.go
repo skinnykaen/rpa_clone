@@ -97,7 +97,7 @@ func (r *mutationResolver) SetUserIsActive(ctx context.Context, id string, isAct
 			Message: consts.ErrAtoi,
 		}
 	}
-	if r.userService.SetIsActive(uint(atoi), isActive); err != nil {
+	if err := r.userService.SetIsActive(uint(atoi), isActive); err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, utils.ResponseError{
 			Code:    http.StatusInternalServerError,

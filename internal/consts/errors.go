@@ -22,7 +22,7 @@ const (
 	ErrAccessDenied        = "access denied"
 )
 
-// http code 503
+// ErrActivationLinkUnavailable have http code 503
 const (
 	ErrActivationLinkUnavailable = "activation link is currently unavailable"
 )

@@ -36,7 +36,7 @@ func Auth(next http.Handler, errLogger *log.Logger) http.Handler {
 		if err != nil {
 			if claims.ExpiresAt.Unix() < time.Now().Unix() {
 				errLogger.Printf("%s", err.Error())
-				http.Error(w, "token expired", http.StatusUnauthorized)
+				http.Error(w, consts.ErrTokenExpired, http.StatusUnauthorized)
 				return
 			}
 			errLogger.Printf("%s", err.Error())
@@ -44,8 +44,8 @@ func Auth(next http.Handler, errLogger *log.Logger) http.Handler {
 			return
 		}
 		if !ok {
-			errLogger.Printf("%s", "token claims are not of type *StandardClaims")
-			http.Error(w, "token claims are not of type *StandardClaims", http.StatusUnauthorized)
+			errLogger.Printf("%s", consts.ErrNotStandardToken)
+			http.Error(w, consts.ErrNotStandardToken, http.StatusUnauthorized)
 			return
 		}
 		r = r.WithContext(context.WithValue(r.Context(), consts.KeyId, claims.Id))

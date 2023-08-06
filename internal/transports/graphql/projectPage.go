@@ -63,7 +63,7 @@ func (r *mutationResolver) DeleteProjectPage(ctx context.Context, id string) (*m
 			Message: consts.ErrAtoi,
 		}
 	}
-	if r.projectPageService.DeleteProjectPage(uint(atoi), ctx.Value(consts.KeyId).(uint)); err != nil {
+	if err := r.projectPageService.DeleteProjectPage(uint(atoi), ctx.Value(consts.KeyId).(uint)); err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, err
 	}
