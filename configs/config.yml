@@ -1,10 +1,10 @@
 private_config:
-  path: "../configs"
+  path: "./configs"
 
 production_env:
-  path: "../configs"
+  path: "./configs"
 development_env:
-    path: "../configs"
+    path: "./configs"
 
 projectPage:
   scratchLink: "0.0.0.0:8601/"
@@ -38,3 +38,7 @@ cors:
   allow_credentials: true
   allowed_methods: [ "GET","POST","DELETE","PUT","PATCH","OPTIONS" ]
   allowed_headers: [ "*" ]
+
+logger:
+  info: "./logs/info.log"
+  error: "./logs/error.log"

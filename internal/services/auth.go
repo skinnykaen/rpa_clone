@@ -174,11 +174,10 @@ func (a AuthServiceImpl) SignUp(newUser models.UserCore) error {
 		}
 	}
 	var subject, body string
-	//TODO config path for activation
 	if activationByLink {
 		subject = "Ваша ссылка активации аккаунта"
-		body = "<p>Перейдите по ссылке http://92.255.79.9/activation/" + newUser.ActivationLink +
-			" для активации вашего аккаунта.</p>"
+		body = "<p>Перейдите по ссылке" + viper.GetString("activation_path") +
+			newUser.ActivationLink + " для активации вашего аккаунта.</p>"
 	} else {
 		subject = "Активация аккаунта"
 		body = "<p>На данный момент активация по ссылке недоступна. Ждите активации от администратора.</p>"
