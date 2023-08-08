@@ -1,4 +1,5 @@
 <b>build</b> 
+- go run github.com/99designs/gqlgen generate --verbose
 - docker compose --env-file ./configs/development.env up -d
 <b>run</b>
 - go run main.go development | production mode

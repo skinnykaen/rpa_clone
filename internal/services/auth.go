@@ -146,7 +146,7 @@ func (a AuthServiceImpl) SignUp(newUser models.UserCore) error {
 	if exist {
 		return utils.ResponseError{
 			Code:    http.StatusBadRequest,
-			Message: consts.ErrIncorrectPasswordOrEmail,
+			Message: consts.ErrEmailAlreadyInUse,
 		}
 	}
 	if len(newUser.Password) < 6 {

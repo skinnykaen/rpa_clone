@@ -63,13 +63,13 @@ type MediaHTTP struct {
 }
 
 type NewUser struct {
-	Email      string `json:"email"`
-	Password   string `json:"password"`
-	Role       Role   `json:"role"`
-	Firstname  string `json:"firstname"`
-	Lastname   string `json:"lastname"`
-	Middlename string `json:"middlename"`
-	Nickname   string `json:"nickname"`
+	Email      string  `json:"email"`
+	Password   string  `json:"password"`
+	Role       Role    `json:"role"`
+	Firstname  string  `json:"firstname"`
+	Lastname   string  `json:"lastname"`
+	Middlename *string `json:"middlename,omitempty"`
+	Nickname   string  `json:"nickname"`
 }
 
 type NewUserResponse struct {
@@ -120,12 +120,12 @@ type SignInResponse struct {
 }
 
 type SignUp struct {
-	Email      string `json:"email"`
-	Password   string `json:"password"`
-	Nickname   string `json:"nickname"`
-	Firstname  string `json:"firstname"`
-	Lastname   string `json:"lastname"`
-	Middlename string `json:"middlename"`
+	Email      string  `json:"email"`
+	Password   string  `json:"password"`
+	Nickname   string  `json:"nickname"`
+	Firstname  string  `json:"firstname"`
+	Lastname   string  `json:"lastname"`
+	Middlename *string `json:"middlename,omitempty"`
 }
 
 type UpdateProjectPage struct {

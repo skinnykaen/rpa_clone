@@ -6,6 +6,7 @@ package resolvers
 
 import (
 	"context"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 	"time"
 
 	"github.com/skinnykaen/rpa_clone/internal/consts"
@@ -15,12 +16,17 @@ import (
 
 // SignUp is the resolver for the SignUp field.
 func (r *mutationResolver) SignUp(ctx context.Context, input models.SignUp) (*models.Response, error) {
+	// middlename не обязательное поле и может быть nil
+	var middlename string
+	if input.Middlename != nil {
+		middlename = *input.Middlename
+	}
 	newUser := models.UserCore{
 		Email:          input.Email,
 		Password:       input.Password,
 		Firstname:      input.Firstname,
 		Lastname:       input.Lastname,
-		Middlename:     input.Middlename,
+		Middlename:     middlename,
 		Nickname:       input.Nickname,
 		Role:           models.RoleStudent,
 		IsActive:       false,
@@ -29,7 +35,11 @@ func (r *mutationResolver) SignUp(ctx context.Context, input models.SignUp) (*mo
 	err := r.authService.SignUp(newUser)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return &models.Response{Ok: false}, err
+		return &models.Response{Ok: false}, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
 	}
 	return &models.Response{Ok: true}, nil
 }
@@ -39,7 +49,11 @@ func (r *mutationResolver) SignIn(ctx context.Context, input models.SignIn) (*mo
 	tokens, err := r.authService.SignIn(input.Email, input.Password)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return &models.SignInResponse{}, err
+		return &models.SignInResponse{}, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
 	}
 	return &models.SignInResponse{
 		AccessToken:  tokens.Access,
@@ -52,7 +66,11 @@ func (r *mutationResolver) RefreshToken(ctx context.Context, refreshToken string
 	accessToken, err := r.authService.Refresh(refreshToken)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err)
-		return &models.SignInResponse{}, err
+		return &models.SignInResponse{}, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
 	}
 	return &models.SignInResponse{
 		AccessToken: accessToken,
@@ -64,7 +82,11 @@ func (r *mutationResolver) ConfirmActivation(ctx context.Context, activationLink
 	tokens, err := r.authService.ConfirmActivation(activationLink)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return &models.SignInResponse{}, err
+		return &models.SignInResponse{}, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
 	}
 	return &models.SignInResponse{
 		AccessToken:  tokens.Access,
@@ -77,7 +99,11 @@ func (r *queryResolver) Me(ctx context.Context) (*models.UserHTTP, error) {
 	user, err := r.userService.GetUserById(ctx.Value(consts.KeyId).(uint), ctx.Value(consts.KeyRole).(models.Role))
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
 	}
 	userHttp := models.UserHTTP{}
 	userHttp.FromCore(user)

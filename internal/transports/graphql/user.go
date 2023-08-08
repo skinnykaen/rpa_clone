@@ -6,23 +6,29 @@ package resolvers
 
 import (
 	"context"
-	"github.com/skinnykaen/rpa_clone/pkg/utils"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 	"net/http"
 	"strconv"
 
 	"github.com/skinnykaen/rpa_clone/graph"
 	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/models"
+	"github.com/skinnykaen/rpa_clone/pkg/utils"
 )
 
 // CreateUser is the resolver for the CreateUser field.
 func (r *mutationResolver) CreateUser(ctx context.Context, input models.NewUser) (*models.UserHTTP, error) {
+	// middlename не обязательное поле и может быть nil
+	var middlename string
+	if input.Middlename != nil {
+		middlename = *input.Middlename
+	}
 	user := models.UserCore{
 		Email:      input.Email,
 		Password:   input.Password,
 		Firstname:  input.Firstname,
 		Lastname:   input.Lastname,
-		Middlename: input.Middlename,
+		Middlename: middlename,
 		Nickname:   input.Nickname,
 		IsActive:   true,
 		Role:       input.Role,
@@ -30,7 +36,14 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input models.NewUser)
 	newUser, err := r.userService.CreateUser(user, ctx.Value(consts.KeyRole).(models.Role))
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusInternalServerError,
+					Message: err.Error(),
+				},
+			},
+		}
 	}
 	userHttp := models.UserHTTP{}
 	userHttp.FromCore(newUser)
@@ -42,9 +55,13 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, input models.UpdateUs
 	atoi, err := strconv.Atoi(input.ID)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, utils.ResponseError{
-			Code:    http.StatusBadRequest,
-			Message: consts.ErrAtoi,
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusBadRequest,
+					Message: consts.ErrAtoi,
+				},
+			},
 		}
 	}
 	// TODO not required field
@@ -59,7 +76,14 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, input models.UpdateUs
 	updatedUser, err := r.userService.UpdateUser(user, ctx.Value(consts.KeyRole).(models.Role))
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusInternalServerError,
+					Message: err.Error(),
+				},
+			},
+		}
 	}
 	userHttp := models.UserHTTP{}
 	userHttp.FromCore(updatedUser)
@@ -71,17 +95,25 @@ func (r *mutationResolver) DeleteUser(ctx context.Context, id string) (*models.R
 	atoi, err := strconv.Atoi(id)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, utils.ResponseError{
-			Code:    http.StatusBadRequest,
-			Message: consts.ErrAtoi,
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusBadRequest,
+					Message: consts.ErrAtoi,
+				},
+			},
 		}
 	}
 	err = r.userService.DeleteUser(uint(atoi))
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, utils.ResponseError{
-			Code:    http.StatusInternalServerError,
-			Message: err.Error(),
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusInternalServerError,
+					Message: err.Error(),
+				},
+			},
 		}
 	}
 	return &models.Response{Ok: true}, nil
@@ -92,16 +124,24 @@ func (r *mutationResolver) SetUserIsActive(ctx context.Context, id string, isAct
 	atoi, err := strconv.Atoi(id)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, utils.ResponseError{
-			Code:    http.StatusBadRequest,
-			Message: consts.ErrAtoi,
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusBadRequest,
+					Message: consts.ErrAtoi,
+				},
+			},
 		}
 	}
 	if err := r.userService.SetIsActive(uint(atoi), isActive); err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, utils.ResponseError{
-			Code:    http.StatusInternalServerError,
-			Message: err.Error(),
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusInternalServerError,
+					Message: err.Error(),
+				},
+			},
 		}
 	}
 	return &models.Response{Ok: true}, nil
@@ -112,7 +152,14 @@ func (r *queryResolver) GetUserByAccessToken(ctx context.Context) (*models.UserH
 	user, err := r.userService.GetUserById(ctx.Value(consts.KeyId).(uint), ctx.Value(consts.KeyRole).(models.Role))
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusInternalServerError,
+					Message: err.Error(),
+				},
+			},
+		}
 	}
 	userHttp := models.UserHTTP{}
 	userHttp.FromCore(user)
@@ -124,15 +171,26 @@ func (r *queryResolver) GetUserByID(ctx context.Context, id string) (*models.Use
 	atoi, err := strconv.Atoi(id)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, utils.ResponseError{
-			Code:    http.StatusBadRequest,
-			Message: consts.ErrAtoi,
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusBadRequest,
+					Message: consts.ErrAtoi,
+				},
+			},
 		}
 	}
 	user, err := r.userService.GetUserById(uint(atoi), ctx.Value(consts.KeyRole).(models.Role))
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusInternalServerError,
+					Message: err.Error(),
+				},
+			},
+		}
 	}
 	userHttp := models.UserHTTP{}
 	userHttp.FromCore(user)
@@ -144,7 +202,14 @@ func (r *queryResolver) GetAllUsers(ctx context.Context, page *int, pageSize *in
 	users, countRows, err := r.userService.GetAllUsers(page, pageSize, active, roles, ctx.Value(consts.KeyRole).(models.Role))
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return &models.UsersList{}, err
+		return &models.UsersList{}, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusInternalServerError,
+					Message: err.Error(),
+				},
+			},
+		}
 	}
 	return &models.UsersList{
 		Users:     models.FromUsersCore(users),

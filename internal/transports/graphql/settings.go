@@ -6,19 +6,24 @@ package resolvers
 
 import (
 	"context"
-	"github.com/skinnykaen/rpa_clone/pkg/utils"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 	"net/http"
 
 	"github.com/skinnykaen/rpa_clone/internal/models"
+	"github.com/skinnykaen/rpa_clone/pkg/utils"
 )
 
 // SetActivationByLink is the resolver for the SetActivationByLink field.
 func (r *mutationResolver) SetActivationByLink(ctx context.Context, activationByLink bool) (*models.Response, error) {
 	if err := r.settingsService.SetActivationByLink(activationByLink); err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, utils.ResponseError{
-			Code:    http.StatusInternalServerError,
-			Message: err.Error(),
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusInternalServerError,
+					Message: err.Error(),
+				},
+			},
 		}
 	}
 	return &models.Response{
@@ -31,9 +36,13 @@ func (r *queryResolver) GetSettings(ctx context.Context) (*models.Settings, erro
 	activationLink, err := r.settingsService.GetActivationByLink()
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, utils.ResponseError{
-			Code:    http.StatusInternalServerError,
-			Message: err.Error(),
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusInternalServerError,
+					Message: err.Error(),
+				},
+			},
 		}
 	}
 	return &models.Settings{

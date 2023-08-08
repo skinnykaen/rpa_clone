@@ -10,3 +10,7 @@ type ResponseError struct {
 func (re ResponseError) Error() string {
 	return re.Message
 }
+
+func (re ResponseError) GetCode() Status {
+	return re.Code
+}
