@@ -94,7 +94,7 @@ func (p ProjectPageGatewayImpl) CreateProjectPage(projectPage models.ProjectPage
 			}
 		}
 		projectPage.Project = project
-		projectPage.LinkToScratch = viper.GetString("projectPage.scratchLink") +
+		projectPage.LinkToScratch = viper.GetString("project_page_scratch_link") +
 			"?#" + strconv.FormatUint(uint64(project.ID), 10)
 		if err := tx.Create(&projectPage).Clauses(clause.Returning{}).Error; err != nil {
 			return utils.ResponseError{
@@ -176,9 +176,11 @@ func (p ProjectPageGatewayImpl) UpdateProjectPage(projectPage models.ProjectPage
 }
 
 func (p ProjectPageGatewayImpl) GetProjectPageById(id uint) (projectPage models.ProjectPageCore, err error) {
-	err = p.postgresClient.Db.Model(&models.ProjectPageCore{}).Preload("Project").First(&projectPage, id).Error
-	return projectPage, utils.ResponseError{
-		Code:    http.StatusInternalServerError,
-		Message: err.Error(),
+	if err = p.postgresClient.Db.Model(&models.ProjectPageCore{}).Preload("Project").First(&projectPage, id).Error; err != nil {
+		return projectPage, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
 	}
+	return projectPage, nil
 }

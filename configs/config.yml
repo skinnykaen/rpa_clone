@@ -4,7 +4,7 @@ private_config:
 production_env:
   path: "./configs"
 development_env:
-    path: "./configs"
+  path: "./configs"
 
 projectPage:
   scratchLink: "0.0.0.0:8601/"
