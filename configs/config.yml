@@ -28,6 +28,7 @@ cors:
     "http://0.0.0.0:5000",
     "http://0.0.0.0:3000",
     "http://0.0.0.0:8601",
+    "http://localhost:8601",
     "http://localhost:3030",
     "http://localhost:5000",
     "http://92.255.79.9",

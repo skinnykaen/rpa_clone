@@ -78,7 +78,7 @@ func (p ProjectHandlerImpl) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			w.Write(jData)
 		default:
-			http.Error(w, "not allowed method", http.StatusBadRequest)
+			http.Error(w, "not allowed method", http.StatusMethodNotAllowed)
 			return
 		}
 	}

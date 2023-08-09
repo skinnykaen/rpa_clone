@@ -32,6 +32,11 @@ func Auth(next http.Handler, errLogger *log.Logger) http.Handler {
 			func(token *jwt.Token) (interface{}, error) {
 				return []byte(viper.GetString("auth_access_signing_key")), nil
 			})
+		if data == nil {
+			errLogger.Printf("%s", err.Error())
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
 		claims, ok := data.Claims.(*services.UserClaims)
 		if err != nil {
 			if claims.ExpiresAt.Unix() < time.Now().Unix() {
