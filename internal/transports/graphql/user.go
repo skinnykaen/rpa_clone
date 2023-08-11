@@ -6,7 +6,6 @@ package resolvers
 
 import (
 	"context"
-	"github.com/vektah/gqlparser/v2/gqlerror"
 	"net/http"
 	"strconv"
 
@@ -14,21 +13,17 @@ import (
 	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/models"
 	"github.com/skinnykaen/rpa_clone/pkg/utils"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
 // CreateUser is the resolver for the CreateUser field.
 func (r *mutationResolver) CreateUser(ctx context.Context, input models.NewUser) (*models.UserHTTP, error) {
-	// middlename не обязательное поле и может быть nil
-	var middlename string
-	if input.Middlename != nil {
-		middlename = *input.Middlename
-	}
 	user := models.UserCore{
 		Email:      input.Email,
 		Password:   input.Password,
 		Firstname:  input.Firstname,
 		Lastname:   input.Lastname,
-		Middlename: middlename,
+		Middlename: utils.StringPointerToString(input.Middlename),
 		Nickname:   input.Nickname,
 		IsActive:   true,
 		Role:       input.Role,

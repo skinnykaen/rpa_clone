@@ -6,12 +6,12 @@ package resolvers
 
 import (
 	"context"
-	"github.com/vektah/gqlparser/v2/gqlerror"
 	"time"
 
 	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/models"
 	"github.com/skinnykaen/rpa_clone/pkg/utils"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
 // SignUp is the resolver for the SignUp field.

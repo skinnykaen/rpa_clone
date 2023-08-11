@@ -141,11 +141,10 @@ func (p ProjectPageGatewayImpl) UpdateProjectPage(projectPage models.ProjectPage
 		if err := tx.Model(&projectPage).Clauses(clause.Returning{}).Take(&models.ProjectPageCore{}, projectPage.ID).
 			Updates(
 				map[string]interface{}{
-					"link_to_scratch": projectPage.LinkToScratch,
-					"title":           projectPage.Title,
-					"instruction":     projectPage.Instruction,
-					"notes":           projectPage.Notes,
-					"is_shared":       projectPage.IsShared,
+					"title":       projectPage.Title,
+					"instruction": projectPage.Instruction,
+					"notes":       projectPage.Notes,
+					"is_shared":   projectPage.IsShared,
 				},
 			).Error; err != nil {
 			return utils.ResponseError{
