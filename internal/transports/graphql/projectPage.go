@@ -6,13 +6,13 @@ package resolvers
 
 import (
 	"context"
-	"github.com/vektah/gqlparser/v2/gqlerror"
 	"net/http"
 	"strconv"
 
 	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/models"
 	"github.com/skinnykaen/rpa_clone/pkg/utils"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
 // CreateProjectPage is the resolver for the CreateProjectPage field.

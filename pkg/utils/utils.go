@@ -64,3 +64,19 @@ func GetHashString(s string) string {
 	h.Write([]byte(s))
 	return hex.EncodeToString(h.Sum(nil))
 }
+
+func StringPointerToString(p *string) string {
+	var s string
+	if p != nil {
+		s = *p
+	}
+	return s
+}
+
+func BoolPointerToBool(p *bool) bool {
+	var b bool
+	if p != nil {
+		b = *p
+	}
+	return b
+}

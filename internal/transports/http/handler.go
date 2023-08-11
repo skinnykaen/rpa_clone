@@ -7,6 +7,7 @@ import (
 
 type Handlers struct {
 	ProjectHandler ProjectHandler
+	AvatarHandler  AvatarHandler
 }
 
 func SetupHandlers(
@@ -17,6 +18,9 @@ func SetupHandlers(
 		ProjectHandler: &ProjectHandlerImpl{
 			loggers:        loggers,
 			projectService: projectService,
+		},
+		AvatarHandler: &AvatarHandlerImpl{
+			loggers: loggers,
 		},
 	}
 }
