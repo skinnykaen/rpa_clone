@@ -39,6 +39,7 @@ func NewServer(
 					mux.Handle("/", playground.Handler("GraphQL playground", "/query"))
 					mux.Handle("/query", Auth(srv, loggers.Err))
 					mux.Handle("/project", Auth(handlers.ProjectHandler, loggers.Err))
+					mux.Handle("/avatar", Auth(handlers.AvatarHandler, loggers.Err))
 				}
 				loggers.Info.Printf(
 					"Connect to %s:%s/ for GraphQL playground",
