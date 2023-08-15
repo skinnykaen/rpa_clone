@@ -1,6 +1,7 @@
 package db
 
 import (
+	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/models"
 	"github.com/skinnykaen/rpa_clone/pkg/logger"
 	"github.com/spf13/viper"
@@ -17,18 +18,43 @@ type PostgresClient struct {
 	InfoLogger *log.Logger
 }
 
-func InitPostgresClient(loggers logger.Loggers) (postgresClient PostgresClient, err error) {
-	// TODO set stdout gorm logger depends on app mode
-	gormLogger := gormLogger.New(
-		log.New(os.Stdout, "[GORM]\t", log.LstdFlags),
-		gormLogger.Config{
-			SlowThreshold:             time.Second,     // Slow SQL threshold
-			LogLevel:                  gormLogger.Info, // Log level
-			IgnoreRecordNotFoundError: false,           // Ignore ErrRecordNotFound error for logger
-			Colorful:                  true,            // Disable color
-		},
-	)
-	db, err := gorm.Open(postgres.Open(viper.GetString("postgres_dsn")), &gorm.Config{Logger: gormLogger})
+func InitPostgresClient(m consts.Mode, loggers logger.Loggers) (postgresClient PostgresClient, err error) {
+	// set stdout gorm logger depends on app mode
+	var dbLogger gormLogger.Interface
+	switch m {
+	case consts.Production:
+		gormF, err := os.OpenFile(viper.GetString("logger.gorm"), os.O_RDWR|os.O_CREATE, 0666)
+		if err != nil {
+			loggers.Err.Fatalf("%s", err.Error())
+		}
+		defer func(gormF *os.File) {
+			err := gormF.Close()
+			if err != nil {
+				loggers.Err.Fatalf("%s", err.Error())
+			}
+		}(gormF)
+		dbLogger = gormLogger.New(
+			log.New(gormF, "[GORM]\t", log.LstdFlags),
+			gormLogger.Config{
+				SlowThreshold:             time.Second,     // Slow SQL threshold
+				LogLevel:                  gormLogger.Info, // Log level
+				IgnoreRecordNotFoundError: false,           // Ignore ErrRecordNotFound error for logger
+				Colorful:                  true,            // Disable color
+			},
+		)
+	case consts.Development:
+		dbLogger = gormLogger.New(
+			log.New(os.Stdout, "[GORM]\t", log.LstdFlags),
+			gormLogger.Config{
+				SlowThreshold:             time.Second,     // Slow SQL threshold
+				LogLevel:                  gormLogger.Info, // Log level
+				IgnoreRecordNotFoundError: false,           // Ignore ErrRecordNotFound error for logger
+				Colorful:                  true,            // Disable color
+			},
+		)
+	}
+
+	db, err := gorm.Open(postgres.Open(viper.GetString("postgres_dsn")), &gorm.Config{Logger: dbLogger})
 	if err != nil {
 		loggers.Err.Fatalf("Failed to initialize postgres client: %s", err.Error())
 		return
@@ -65,5 +91,4 @@ func (c *PostgresClient) Migrate() (err error) {
 	} else {
 		return c.Db.Create(&models.SettingsCore{ID: 1, ActivationByLink: true}).Error
 	}
-	return nil
 }

@@ -10,6 +10,7 @@ type ProjectPageHttp {
 	notes: String!
 	linkToScratch: String!
 	isShared: Boolean!
+	isBanned: Boolean!
 }
 
 type ProjectPageHttpList {
@@ -35,4 +36,5 @@ extend type Mutation {
 	CreateProjectPage: ProjectPageHttp! @hasRole(roles: [SuperAdmin, UnitAdmin, Student, Teacher])
 	UpdateProjectPage(input: UpdateProjectPage!): ProjectPageHttp! @hasRole(roles: [SuperAdmin, UnitAdmin, Student, Teacher])
 	DeleteProjectPage(id: ID!): Response! @hasRole(roles: [SuperAdmin, UnitAdmin, Student, Teacher])
+	SetIsBanned(projectPageId: ID!, isBanned: Boolean!): Response! @hasRole(roles: [SuperAdmin])
 }

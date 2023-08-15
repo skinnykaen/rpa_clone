@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 )
 
 func Auth(next http.Handler, errLogger *log.Logger) http.Handler {
@@ -31,15 +32,25 @@ func Auth(next http.Handler, errLogger *log.Logger) http.Handler {
 			func(token *jwt.Token) (interface{}, error) {
 				return []byte(viper.GetString("auth_access_signing_key")), nil
 			})
-		if err != nil {
+		if data == nil {
 			errLogger.Printf("%s", err.Error())
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
 		claims, ok := data.Claims.(*services.UserClaims)
+		if err != nil {
+			if claims.ExpiresAt.Unix() < time.Now().Unix() {
+				errLogger.Printf("%s", err.Error())
+				http.Error(w, consts.ErrTokenExpired, http.StatusUnauthorized)
+				return
+			}
+			errLogger.Printf("%s", err.Error())
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
 		if !ok {
-			errLogger.Printf("%s", "token claims are not of type *StandardClaims")
-			http.Error(w, "token claims are not of type *StandardClaims", http.StatusUnauthorized)
+			errLogger.Printf("%s", consts.ErrNotStandardToken)
+			http.Error(w, consts.ErrNotStandardToken, http.StatusUnauthorized)
 			return
 		}
 		r = r.WithContext(context.WithValue(r.Context(), consts.KeyId, claims.Id))

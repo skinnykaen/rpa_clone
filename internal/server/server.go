@@ -35,12 +35,11 @@ func NewServer(
 				case consts.Production:
 					mux.Handle("/query", Auth(srv, loggers.Err))
 					mux.Handle("/project", Auth(handlers.ProjectHandler, loggers.Err))
-					break
 				case consts.Development:
 					mux.Handle("/", playground.Handler("GraphQL playground", "/query"))
 					mux.Handle("/query", Auth(srv, loggers.Err))
 					mux.Handle("/project", Auth(handlers.ProjectHandler, loggers.Err))
-					break
+					mux.Handle("/avatar", Auth(handlers.AvatarHandler, loggers.Err))
 				}
 				loggers.Info.Printf(
 					"Connect to %s:%s/ for GraphQL playground",

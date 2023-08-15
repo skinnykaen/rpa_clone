@@ -12,6 +12,7 @@ import (
 	"github.com/skinnykaen/rpa_clone/pkg/logger"
 	"go.uber.org/fx"
 	"log"
+	"os"
 )
 
 func InvokeWith(m consts.Mode, options ...fx.Option) *fx.App {
@@ -34,11 +35,10 @@ func InvokeWith(m consts.Mode, options ...fx.Option) *fx.App {
 }
 
 func RunApp() {
-	//if len(os.Args) < 2 ||
-	//	(consts.Mode(os.Args[1]) != consts.Development &&
-	//		consts.Mode(os.Args[1]) != consts.Production) {
-	//	log.Fatalf("%s", "app mode is not provided")
-	//	return
-	//}
-	InvokeWith(consts.Development, fx.Invoke(server.NewServer)).Run()
+	if len(os.Args) == 2 && (consts.Mode(os.Args[1]) == consts.Development ||
+		consts.Mode(os.Args[1]) == consts.Production) {
+		InvokeWith(consts.Mode(os.Args[1]), fx.Invoke(server.NewServer)).Run()
+	} else {
+		InvokeWith(consts.Development, fx.Invoke(server.NewServer)).Run()
+	}
 }

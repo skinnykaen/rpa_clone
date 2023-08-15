@@ -16,7 +16,7 @@ type UserCore struct {
 	Role           Role           `gorm:"not null;"`
 	Firstname      string         `gorm:"not null;"`
 	Lastname       string         `gorm:"not null;"`
-	Middlename     string         `gorm:"not null;"`
+	Middlename     string         `gorm:""`
 	Nickname       string         `gorm:"not null;"`
 	IsActive       bool           `gorm:"not null;default:false;type:boolean;column:is_active"`
 	ActivationLink string

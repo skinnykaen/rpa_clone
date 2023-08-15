@@ -63,13 +63,13 @@ type MediaHTTP struct {
 }
 
 type NewUser struct {
-	Email      string `json:"email"`
-	Password   string `json:"password"`
-	Role       Role   `json:"role"`
-	Firstname  string `json:"firstname"`
-	Lastname   string `json:"lastname"`
-	Middlename string `json:"middlename"`
-	Nickname   string `json:"nickname"`
+	Email      string  `json:"email"`
+	Password   string  `json:"password"`
+	Role       Role    `json:"role"`
+	Firstname  string  `json:"firstname"`
+	Lastname   string  `json:"lastname"`
+	Middlename *string `json:"middlename,omitempty"`
+	Nickname   string  `json:"nickname"`
 }
 
 type NewUserResponse struct {
@@ -93,6 +93,7 @@ type ProjectPageHTTP struct {
 	Notes            string `json:"notes"`
 	LinkToScratch    string `json:"linkToScratch"`
 	IsShared         bool   `json:"isShared"`
+	IsBanned         bool   `json:"isBanned"`
 }
 
 type ProjectPageHTTPList struct {
@@ -119,12 +120,12 @@ type SignInResponse struct {
 }
 
 type SignUp struct {
-	Email      string `json:"email"`
-	Password   string `json:"password"`
-	Nickname   string `json:"nickname"`
-	Firstname  string `json:"firstname"`
-	Lastname   string `json:"lastname"`
-	Middlename string `json:"middlename"`
+	Email      string  `json:"email"`
+	Password   string  `json:"password"`
+	Nickname   string  `json:"nickname"`
+	Firstname  string  `json:"firstname"`
+	Lastname   string  `json:"lastname"`
+	Middlename *string `json:"middlename,omitempty"`
 }
 
 type UpdateProjectPage struct {

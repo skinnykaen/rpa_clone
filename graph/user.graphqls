@@ -28,7 +28,7 @@ input NewUser {
 	role: Role!
 	firstname: String!
 	lastname: String!
-	middlename: String!
+	middlename: String
 	nickname: String!
 }
 

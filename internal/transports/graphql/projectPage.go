@@ -6,10 +6,13 @@ package resolvers
 
 import (
 	"context"
+	"net/http"
 	"strconv"
 
 	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/models"
+	"github.com/skinnykaen/rpa_clone/pkg/utils"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
 // CreateProjectPage is the resolver for the CreateProjectPage field.
@@ -17,7 +20,11 @@ func (r *mutationResolver) CreateProjectPage(ctx context.Context) (*models.Proje
 	newProjectPage, err := r.projectPageService.CreateProjectPage(ctx.Value(consts.KeyId).(uint))
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
 	}
 	projectPageHttp := models.ProjectPageHTTP{}
 	projectPageHttp.FromCore(newProjectPage)
@@ -29,7 +36,14 @@ func (r *mutationResolver) UpdateProjectPage(ctx context.Context, input models.U
 	atoi, err := strconv.Atoi(input.ID)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusBadRequest,
+					Message: consts.ErrAtoi,
+				},
+			},
+		}
 	}
 	projectPage := models.ProjectPageCore{
 		ID:          uint(atoi),
@@ -41,7 +55,11 @@ func (r *mutationResolver) UpdateProjectPage(ctx context.Context, input models.U
 	updatedProjectPage, err := r.projectPageService.UpdateProjectPage(projectPage, ctx.Value(consts.KeyId).(uint))
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
 	}
 	projectPageHttp := models.ProjectPageHTTP{}
 	projectPageHttp.FromCore(updatedProjectPage)
@@ -53,11 +71,47 @@ func (r *mutationResolver) DeleteProjectPage(ctx context.Context, id string) (*m
 	atoi, err := strconv.Atoi(id)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusBadRequest,
+					Message: consts.ErrAtoi,
+				},
+			},
+		}
 	}
-	if r.projectPageService.DeleteProjectPage(uint(atoi), ctx.Value(consts.KeyId).(uint)); err != nil {
+	if err := r.projectPageService.DeleteProjectPage(uint(atoi), ctx.Value(consts.KeyId).(uint)); err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
+	}
+	return &models.Response{Ok: true}, nil
+}
+
+// SetIsBanned is the resolver for the SetIsBanned field.
+func (r *mutationResolver) SetIsBanned(ctx context.Context, projectPageID string, isBanned bool) (*models.Response, error) {
+	atoi, err := strconv.Atoi(projectPageID)
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusBadRequest,
+					Message: consts.ErrAtoi,
+				},
+			},
+		}
+	}
+	if err := r.projectPageService.SetIsBanned(uint(atoi), isBanned); err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
 	}
 	return &models.Response{Ok: true}, nil
 }
@@ -67,12 +121,23 @@ func (r *queryResolver) GetProjectPageByID(ctx context.Context, id string) (*mod
 	atoi, err := strconv.Atoi(id)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusBadRequest,
+					Message: consts.ErrAtoi,
+				},
+			},
+		}
 	}
-	project, err := r.projectPageService.GetProjectPageById(uint(atoi), ctx.Value(consts.KeyId).(uint))
+	project, err := r.projectPageService.GetProjectPageById(uint(atoi), ctx.Value(consts.KeyId).(uint), ctx.Value(consts.KeyRole).(models.Role))
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
 	}
 	projectPageHttp := models.ProjectPageHTTP{}
 	projectPageHttp.FromCore(project)
@@ -82,10 +147,25 @@ func (r *queryResolver) GetProjectPageByID(ctx context.Context, id string) (*mod
 // GetAllProjectPagesByAuthorID is the resolver for the GetAllProjectPagesByAuthorId field.
 func (r *queryResolver) GetAllProjectPagesByAuthorID(ctx context.Context, id string, page *int, pageSize *int) (*models.ProjectPageHTTPList, error) {
 	atoi, err := strconv.Atoi(id)
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusBadRequest,
+					Message: consts.ErrAtoi,
+				},
+			},
+		}
+	}
 	projects, countRows, err := r.projectPageService.GetProjectsPageByAuthorId(uint(atoi), page, pageSize)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
 	}
 	return &models.ProjectPageHTTPList{
 		ProjectPages: models.FromProjectPagesCore(projects),
@@ -95,10 +175,14 @@ func (r *queryResolver) GetAllProjectPagesByAuthorID(ctx context.Context, id str
 
 // GetAllProjectPagesByAccessToken is the resolver for the GetAllProjectPagesByAccessToken field.
 func (r *queryResolver) GetAllProjectPagesByAccessToken(ctx context.Context, page *int, pageSize *int) (*models.ProjectPageHTTPList, error) {
-	projects, countRows, err := r.projectPageService.GetAllProjectPages(page, pageSize, ctx.Value(consts.KeyRole).(models.Role), ctx.Value(consts.KeyId).(uint))
+	projects, countRows, err := r.projectPageService.GetAllProjectPages(page, pageSize, ctx.Value(consts.KeyId).(uint), ctx.Value(consts.KeyRole).(models.Role))
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, err
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
 	}
 	return &models.ProjectPageHTTPList{
 		ProjectPages: models.FromProjectPagesCore(projects),

@@ -3,6 +3,8 @@ package gateways
 import (
 	"github.com/skinnykaen/rpa_clone/internal/db"
 	"github.com/skinnykaen/rpa_clone/internal/models"
+	"github.com/skinnykaen/rpa_clone/pkg/utils"
+	"net/http"
 )
 
 type SettingsGateway interface {
@@ -15,9 +17,14 @@ type SettingsGatewayImpl struct {
 }
 
 func (s SettingsGatewayImpl) GetActivationByLink() (activationByCode bool, err error) {
-	err = s.postgresClient.Db.Model(&models.SettingsCore{}).Select("activation_by_link").Where("id = ? ", 1).
-		First(&activationByCode).Error
-	return
+	if err := s.postgresClient.Db.Model(&models.SettingsCore{}).Select("activation_by_link").Where("id = ? ", 1).
+		First(&activationByCode).Error; err != nil {
+		return false, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
+	}
+	return activationByCode, nil
 }
 
 func (s SettingsGatewayImpl) SetActivationByLink(activationByCode bool) error {
