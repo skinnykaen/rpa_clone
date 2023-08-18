@@ -6,12 +6,25 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"time"
 )
 
 type AbsoluteMediaHTTP struct {
 	ID          string `json:"id"`
 	URI         string `json:"uri"`
 	URIAbsolute string `json:"uri_absolute"`
+}
+
+type ChatHTTP struct {
+	ID    string    `json:"id"`
+	User1 *UserHTTP `json:"user1"`
+	User2 *UserHTTP `json:"user2"`
+}
+
+type ChatMutationResult struct {
+	ID    string `json:"id"`
+	User1 string `json:"user1"`
+	User2 string `json:"user2"`
 }
 
 type CourseAPIMediaCollectionHTTP struct {
@@ -62,6 +75,42 @@ type MediaHTTP struct {
 	URI string `json:"uri"`
 }
 
+type MessageConnection struct {
+	Edges      []*MessageEdge `json:"edges,omitempty"`
+	PageInfo   *PageInfo      `json:"pageInfo"`
+	TotalCount *int           `json:"totalCount,omitempty"`
+}
+
+type MessageEdge struct {
+	Node   *MessageHTTP `json:"node,omitempty"`
+	Cursor string       `json:"cursor"`
+}
+
+type MessageHTTP struct {
+	ID       string     `json:"id"`
+	Payload  string     `json:"payload"`
+	Sender   *UserHTTP  `json:"sender"`
+	Receiver *UserHTTP  `json:"receiver"`
+	ChatID   string     `json:"chatID"`
+	Time     *time.Time `json:"time,omitempty"`
+}
+
+type MessagesFromUserInput struct {
+	Receiver string `json:"receiver"`
+	Sender   string `json:"sender"`
+}
+
+type NewChat struct {
+	User1 string `json:"user1"`
+	User2 string `json:"user2"`
+}
+
+type NewMessage struct {
+	Payload  string `json:"payload"`
+	Sender   string `json:"sender"`
+	Receiver string `json:"receiver"`
+}
+
 type NewUser struct {
 	Email      string  `json:"email"`
 	Password   string  `json:"password"`
@@ -79,6 +128,12 @@ type NewUserResponse struct {
 	Firstname  string `json:"firstname"`
 	Lastname   string `json:"lastname"`
 	Middlename string `json:"middlename"`
+}
+
+type PageInfo struct {
+	StartCursor string `json:"startCursor"`
+	EndCursor   string `json:"endCursor"`
+	HasNextPage bool   `json:"hasNextPage"`
 }
 
 type ProjectPageHTTP struct {

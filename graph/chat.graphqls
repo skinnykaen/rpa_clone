@@ -1,0 +1,24 @@
+type ChatHttp {
+    id: ID!
+    user1: UserHttp!
+    user2: UserHttp!
+}
+
+input NewChat{
+    user1: ID!
+    user2: ID!
+}
+
+extend type Query {
+    Chats(user: ID): [ChatHttp!] @hasRole(roles: [SuperAdmin, Student])
+}
+
+extend type Mutation {
+    CreateChat(input:NewChat!): ChatMutationResult! @hasRole(roles: [SuperAdmin, Student])
+
+    DeleteChat(id:ID!):Response! @hasRole(roles: [SuperAdmin, Student])
+}
+
+type Subscription {
+    UserJoined(user: ID!, chat:ID!):MessageHttp! @hasRole(roles: [SuperAdmin, Student])
+}

@@ -1,0 +1,58 @@
+
+scalar Time
+
+type MessageHttp {
+    id: ID!
+    payload: String!
+    sender: UserHttp!
+    receiver: UserHttp!
+    chatID: ID!
+    time: Time
+}
+
+input MessagesFromUserInput{
+    receiver:ID!
+    sender:ID!
+}
+
+type MessageEdge {
+    node: MessageHttp
+    cursor: ID!
+}
+
+type MessageConnection {
+    edges: [MessageEdge]
+    pageInfo: PageInfo!
+    totalCount: Int
+}
+
+type PageInfo {
+    startCursor: ID!
+    endCursor: ID!
+    hasNextPage: Boolean!
+}
+
+input NewMessage{
+    payload: String!
+    sender: ID!
+    receiver: ID!
+}
+
+type ChatMutationResult{
+    id: ID!
+    user1: ID!
+    user2: ID!
+}
+
+extend type Query {
+    MessagesFromUser(input:MessagesFromUserInput!, first: Int, after:ID):MessageConnection! @hasRole(roles: [SuperAdmin, Student])
+}
+
+extend type Mutation {
+    PostMessage(input:NewMessage!): MessageHttp! @hasRole(roles: [SuperAdmin, Student])
+
+    DeleteMessage(id:ID!):Response! @hasRole(roles: [SuperAdmin, Student])
+}
+
+
+
