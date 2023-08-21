@@ -8,7 +8,7 @@ import (
 type Gateways struct {
 	fx.Out
 	UserGateway UserGateway
-	ParentRel   ParentRel
+	ParentRel   ParentRelGateway
 	Project     ProjectGateway
 	ProjectPage ProjectPageGateway
 	Settings    SettingsGateway

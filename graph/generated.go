@@ -517,7 +517,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateParentRel(childComplexity, args["parentId"].(string), args["childID"].(string)), true
+		return e.complexity.Mutation.CreateParentRel(childComplexity, args["parentId"].(string), args["childId"].(string)), true
 
 	case "Mutation.CreateProjectPage":
 		if e.complexity.Mutation.CreateProjectPage == nil {
@@ -548,7 +548,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.DeleteParentRel(childComplexity, args["parentId"].(string), args["childID"].(string)), true
+		return e.complexity.Mutation.DeleteParentRel(childComplexity, args["parentId"].(string), args["childId"].(string)), true
 
 	case "Mutation.DeleteProjectPage":
 		if e.complexity.Mutation.DeleteProjectPage == nil {
@@ -1237,14 +1237,14 @@ func (ec *executionContext) field_Mutation_CreateParentRel_args(ctx context.Cont
 	}
 	args["parentId"] = arg0
 	var arg1 string
-	if tmp, ok := rawArgs["childID"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("childID"))
+	if tmp, ok := rawArgs["childId"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("childId"))
 		arg1, err = ec.unmarshalNID2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["childID"] = arg1
+	args["childId"] = arg1
 	return args, nil
 }
 
@@ -1276,14 +1276,14 @@ func (ec *executionContext) field_Mutation_DeleteParentRel_args(ctx context.Cont
 	}
 	args["parentId"] = arg0
 	var arg1 string
-	if tmp, ok := rawArgs["childID"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("childID"))
+	if tmp, ok := rawArgs["childId"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("childId"))
 		arg1, err = ec.unmarshalNID2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["childID"] = arg1
+	args["childId"] = arg1
 	return args, nil
 }
 
@@ -3966,8 +3966,32 @@ func (ec *executionContext) _Mutation_CreateParentRel(ctx context.Context, field
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateParentRel(rctx, fc.Args["parentId"].(string), fc.Args["childID"].(string))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().CreateParentRel(rctx, fc.Args["parentId"].(string), fc.Args["childId"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin"})
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.HasRole == nil {
+				return nil, errors.New("directive hasRole is not implemented")
+			}
+			return ec.directives.HasRole(ctx, nil, directive0, roles)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*models.Response); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/skinnykaen/rpa_clone/internal/models.Response`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4025,8 +4049,32 @@ func (ec *executionContext) _Mutation_DeleteParentRel(ctx context.Context, field
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().DeleteParentRel(rctx, fc.Args["parentId"].(string), fc.Args["childID"].(string))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().DeleteParentRel(rctx, fc.Args["parentId"].(string), fc.Args["childId"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin"})
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.HasRole == nil {
+				return nil, errors.New("directive hasRole is not implemented")
+			}
+			return ec.directives.HasRole(ctx, nil, directive0, roles)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*models.Response); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/skinnykaen/rpa_clone/internal/models.Response`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -6011,8 +6059,32 @@ func (ec *executionContext) _Query_GetChildrenByParent(ctx context.Context, fiel
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().GetChildrenByParent(rctx, fc.Args["parentId"].(string))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().GetChildrenByParent(rctx, fc.Args["parentId"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "Parent"})
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.HasRole == nil {
+				return nil, errors.New("directive hasRole is not implemented")
+			}
+			return ec.directives.HasRole(ctx, nil, directive0, roles)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*models.UsersList); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/skinnykaen/rpa_clone/internal/models.UsersList`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
