@@ -11,6 +11,10 @@ type UserCore struct {
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	DeletedAt      gorm.DeletedAt `gorm:"index"`
+	RobboUnitID    uint
+	RobboUnit      RobboUnitCore `gorm:"foreignKey:RobboUnitID"`
+	RobboGroupID   uint
+	RobboGroup     RobboGroupCore `gorm:"foreignKey:RobboGroupID"`
 	Email          string         `gorm:"not null;"`
 	Password       string         `gorm:"not null;"`
 	Role           Role           `gorm:"not null;"`

@@ -18,6 +18,7 @@ type UserGateway interface {
 	GetUserById(id uint) (user models.UserCore, err error)
 	GetUserByActivationLink(link string) (user models.UserCore, err error)
 	GetUserByEmail(email string) (user models.UserCore, err error)
+	GetUsersByEmail(offset, limit int, role []models.Role, email string) (users []models.UserCore, countRows uint, err error)
 	GetAllUsers(offset, limit int, isActive bool, role []models.Role) (users []models.UserCore, countRows uint, err error)
 	DoesExistEmail(id uint, email string) (bool, error)
 	SetIsActive(id uint, isActive bool) error
@@ -25,6 +26,28 @@ type UserGateway interface {
 
 type UserGatewayImpl struct {
 	postgresClient db.PostgresClient
+}
+
+func (u UserGatewayImpl) GetUsersByEmail(offset, limit int, role []models.Role, email string) (users []models.UserCore, countRows uint, err error) {
+	var count int64
+	if len(role) == 0 {
+		role = append(role,
+			models.RoleStudent,
+			models.RoleParent,
+			models.RoleTeacher,
+			models.RoleUnitAdmin,
+		)
+	}
+	result := u.postgresClient.Db.Limit(limit).Offset(offset).
+		Where("email LIKE ? AND (role) IN ?", email+"%", role).Find(&users)
+	if result.Error != nil {
+		return []models.UserCore{}, 0, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: result.Error.Error(),
+		}
+	}
+	result.Count(&count)
+	return users, uint(count), result.Error
 }
 
 func (u UserGatewayImpl) GetUserByActivationLink(link string) (user models.UserCore, err error) {

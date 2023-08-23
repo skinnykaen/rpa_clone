@@ -64,6 +64,7 @@ type Mutation {
 	UpdateUser(input: UpdateUser!): UserHttp! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
 	DeleteUser(id: ID!): Response! @hasRole(roles: [SuperAdmin, UnitAdmin])
 	SetUserIsActive(id: ID!, isActive: Boolean!): Response! @hasRole(roles: [SuperAdmin, UnitAdmin])
+	SearchUsersByEmail(page: Int, pageSize: Int, email: String!, roles: [Role!]!): UsersList! @hasRole(roles: [SuperAdmin])
 }
 
 type Query {

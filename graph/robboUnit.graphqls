@@ -1,0 +1,34 @@
+type RobboUnitHttp {
+	id: ID!
+	createdAt: Timestamp!
+	updatedAt: Timestamp!
+	name: String!
+	city: String!
+}
+
+input NewRobboUnit {
+	name: String!
+	city: String!
+}
+
+input UpdateRobboUnit {
+	id: ID!
+	name: String!
+	city: String!
+}
+
+type robboUnitHttpList {
+	robboUnits: [RobboUnitHttp!]!
+	countRows: Int!
+}
+
+extend type Query {
+	GetRobboUnitById(id: ID!): RobboUnitHttp @hasRole(roles: [SuperAdmin, UnitAdmin])
+	GetAllRobboUnitByAccessToken(page: Int, pageSize: Int): robboUnitHttpList! @hasRole(roles: [SuperAdmin, UnitAdmin])
+}
+
+extend type Mutation {
+	CreateRobboUnit(input: NewRobboUnit!): RobboUnitHttp! @hasRole(roles: [SuperAdmin])
+	UpdateRobboUnit(input: UpdateRobboUnit!): RobboUnitHttp! @hasRole(roles: [SuperAdmin])
+	DeleteRobboUnit(id: ID!): Response! @hasRole(roles: [SuperAdmin])
+}

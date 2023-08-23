@@ -13,6 +13,7 @@ type Services struct {
 	ProjectPageService ProjectPageService
 	SettingsService    SettingsService
 	ParentRelService   ParentRelService
+	RobboUnitService   RobboUnitService
 }
 
 func SetupServices(
@@ -21,6 +22,7 @@ func SetupServices(
 	projectPageGateway gateways.ProjectPageGateway,
 	settingsGateway gateways.SettingsGateway,
 	parentRelGateway gateways.ParentRelGateway,
+	robboUnitGateway gateways.RobboUnitGateway,
 ) Services {
 	return Services{
 		UserService: &UserServiceImpl{
@@ -42,6 +44,9 @@ func SetupServices(
 		},
 		ParentRelService: &ParentRelServiceImpl{
 			parentRelGateway: parentRelGateway,
+		},
+		RobboUnitService: &RobboUnitServiceImpl{
+			robboUnitGateway: robboUnitGateway,
 		},
 	}
 }

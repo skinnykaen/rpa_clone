@@ -13,7 +13,8 @@ type UserService interface {
 	DeleteUser(id uint) error
 	UpdateUser(user models.UserCore, clientRole models.Role) (updatedUser models.UserCore, err error)
 	GetUserById(id uint, clientRole models.Role) (models.UserCore, error)
-	GetAllUsers(page, pageSize *int, isActive bool, role []models.Role, clientRole models.Role) (users []models.UserCore, countRows uint, err error)
+	GetAllUsers(page, pageSize *int, isActive bool, roles []models.Role, clientRole models.Role) (users []models.UserCore, countRows uint, err error)
+	GetUsersByEmail(page, pageSize *int, roles []models.Role, email string, clientRole models.Role) (users []models.UserCore, countRows uint, err error)
 	SetIsActive(id uint, isActive bool) error
 }
 
@@ -21,11 +22,25 @@ type UserServiceImpl struct {
 	userGateway gateways.UserGateway
 }
 
+func (u UserServiceImpl) GetUsersByEmail(page, pageSize *int, roles []models.Role, email string, clientRole models.Role) (users []models.UserCore, countRows uint, err error) {
+	switch clientRole {
+	case models.RoleUnitAdmin:
+		for _, role := range roles {
+			if role.String() == models.RoleSuperAdmin.String() || role.String() == models.RoleUnitAdmin.String() {
+				return []models.UserCore{}, 0, utils.ResponseError{
+					Code:    http.StatusForbidden,
+					Message: consts.ErrAccessDenied,
+				}
+			}
+		}
+	}
+	offset, limit := utils.GetOffsetAndLimit(page, pageSize)
+	return u.userGateway.GetUsersByEmail(offset, limit, roles, email)
+}
+
 func (u UserServiceImpl) SetIsActive(id uint, isActive bool) error {
 	return u.userGateway.SetIsActive(id, isActive)
 }
-
-// TODO use gorm hooks beforeCreate for example for check client role
 
 func (u UserServiceImpl) CreateUser(user models.UserCore, clientRole models.Role) (newUser models.UserCore, err error) {
 	// TODO сразу активен? надо ли высылать код
@@ -37,7 +52,7 @@ func (u UserServiceImpl) CreateUser(user models.UserCore, clientRole models.Role
 			Message: consts.ErrAccessDenied,
 		}
 	}
-
+	// TODO check valid email
 	exist, err := u.userGateway.DoesExistEmail(0, user.Email)
 	if err != nil {
 		return models.UserCore{}, err
