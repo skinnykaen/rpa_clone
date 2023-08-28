@@ -17,14 +17,14 @@ input UpdateRobboUnit {
 	city: String!
 }
 
-type robboUnitHttpList {
+type RobboUnitHttpList {
 	robboUnits: [RobboUnitHttp!]!
 	countRows: Int!
 }
 
 extend type Query {
 	GetRobboUnitById(id: ID!): RobboUnitHttp @hasRole(roles: [SuperAdmin, UnitAdmin])
-	GetAllRobboUnitByAccessToken(page: Int, pageSize: Int): robboUnitHttpList! @hasRole(roles: [SuperAdmin, UnitAdmin])
+	GetAllRobboUnitByAccessToken(page: Int, pageSize: Int): RobboUnitHttpList! @hasRole(roles: [SuperAdmin, UnitAdmin])
 }
 
 extend type Mutation {

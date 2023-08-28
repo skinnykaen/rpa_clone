@@ -13,7 +13,7 @@ type RobboUnitGateway interface {
 	CreateRobboUnit(robboUnit models.RobboUnitCore) (newRobboUnit models.RobboUnitCore, err error)
 	GetRobboUnitById(id uint) (robboUnit models.RobboUnitCore, err error)
 	DeleteRobboUnit(id uint) error
-	UpdateRobboUnit(robboUnit models.RobboUnitCore) (updated models.RobboUnitCore, err error)
+	UpdateRobboUnit(robboUnit models.RobboUnitCore) (models.RobboUnitCore, error)
 	GetAllRobboUnits(offset, limit int) (robboUnits []models.RobboUnitCore, countRows uint, err error)
 }
 
@@ -58,14 +58,9 @@ func (r RobboUnitGatewayImpl) DeleteRobboUnit(id uint) error {
 	return nil
 }
 
-func (r RobboUnitGatewayImpl) UpdateRobboUnit(robboUnit models.RobboUnitCore) (updated models.RobboUnitCore, err error) {
-	if err = r.postgresClient.Db.Model(&robboUnit).Clauses(clause.Returning{}).Take(&models.RobboUnitCore{}, robboUnit.ID).
-		Updates(
-			map[string]interface{}{
-				"name": robboUnit.Name,
-				"city": robboUnit.City,
-			},
-		).Error; err != nil {
+func (r RobboUnitGatewayImpl) UpdateRobboUnit(robboUnit models.RobboUnitCore) (models.RobboUnitCore, error) {
+	if err := r.postgresClient.Db.Model(&robboUnit).Clauses(clause.Returning{}).Take(&models.RobboUnitCore{}, robboUnit.ID).
+		Updates(&robboUnit).Error; err != nil {
 		return models.RobboUnitCore{}, utils.ResponseError{
 			Code:    http.StatusInternalServerError,
 			Message: err.Error(),

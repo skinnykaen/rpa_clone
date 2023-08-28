@@ -44,5 +44,5 @@ func FromProjectPagesCore(projectPagesCore []ProjectPageCore) (projectPagesHttp 
 		tmpProjectPageHttp.FromCore(projectPageCore)
 		projectPagesHttp = append(projectPagesHttp, &tmpProjectPageHttp)
 	}
-	return
+	return projectPagesHttp
 }

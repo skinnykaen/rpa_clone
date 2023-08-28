@@ -13,6 +13,7 @@ type Gateways struct {
 	ProjectPage ProjectPageGateway
 	Settings    SettingsGateway
 	RobboUnit   RobboUnitGateway
+	RobboGroup  RobboGroupGateway
 }
 
 func SetupGateways(pc db.PostgresClient) Gateways {
@@ -23,5 +24,6 @@ func SetupGateways(pc db.PostgresClient) Gateways {
 		ProjectPage: ProjectPageGatewayImpl{pc},
 		Settings:    SettingsGatewayImpl{pc},
 		RobboUnit:   RobboUnitGatewayImpl{pc},
+		RobboGroup:  RobboGroupGatewayImpl{pc},
 	}
 }

@@ -14,6 +14,7 @@ type Services struct {
 	SettingsService    SettingsService
 	ParentRelService   ParentRelService
 	RobboUnitService   RobboUnitService
+	RobboGroupService  RobboGroupService
 }
 
 func SetupServices(
@@ -23,20 +24,21 @@ func SetupServices(
 	settingsGateway gateways.SettingsGateway,
 	parentRelGateway gateways.ParentRelGateway,
 	robboUnitGateway gateways.RobboUnitGateway,
+	robboGroupGateway gateways.RobboGroupGateway,
 ) Services {
 	return Services{
 		UserService: &UserServiceImpl{
 			userGateway: userGateway,
 		},
 		AuthService: &AuthServiceImpl{
-			userGateway:     userGateway,
-			settingsGateway: settingsGateway,
+			userGateway:            userGateway,
+			getterActivationByLink: settingsGateway,
+			//settingsGateway: settingsGateway,
 		},
 		ProjectService: &ProjectServiceImpl{
 			projectGateway: projectGateway,
 		},
 		ProjectPageService: &ProjectPageServiceImpl{
-			projectGateway:     projectGateway,
 			projectPageGateway: projectPageGateway,
 		},
 		SettingsService: &SettingsServiceImpl{
@@ -47,6 +49,9 @@ func SetupServices(
 		},
 		RobboUnitService: &RobboUnitServiceImpl{
 			robboUnitGateway: robboUnitGateway,
+		},
+		RobboGroupService: &RobboGroupServiceImpl{
+			robboGroupGateway: robboGroupGateway,
 		},
 	}
 }

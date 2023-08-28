@@ -62,6 +62,11 @@ type MediaHTTP struct {
 	URI string `json:"uri"`
 }
 
+type NewRobboGroup struct {
+	Name        string `json:"name"`
+	RobboUnitID string `json:"robboUnitId"`
+}
+
 type NewRobboUnit struct {
 	Name string `json:"name"`
 	City string `json:"city"`
@@ -110,12 +115,30 @@ type Response struct {
 	Ok bool `json:"ok"`
 }
 
+type RobboGroupHTTP struct {
+	ID        string         `json:"id"`
+	CreatedAt string         `json:"createdAt"`
+	UpdatedAt string         `json:"updatedAt"`
+	Name      string         `json:"name"`
+	RobboUnit *RobboUnitHTTP `json:"robboUnit"`
+}
+
+type RobboGroupHTTPList struct {
+	RobboGroups []*RobboGroupHTTP `json:"robboGroups"`
+	CountRows   int               `json:"countRows"`
+}
+
 type RobboUnitHTTP struct {
 	ID        string `json:"id"`
 	CreatedAt string `json:"createdAt"`
 	UpdatedAt string `json:"updatedAt"`
 	Name      string `json:"name"`
 	City      string `json:"city"`
+}
+
+type RobboUnitHTTPList struct {
+	RobboUnits []*RobboUnitHTTP `json:"robboUnits"`
+	CountRows  int              `json:"countRows"`
 }
 
 type Settings struct {
@@ -147,6 +170,11 @@ type UpdateProjectPage struct {
 	Instruction string `json:"instruction"`
 	Notes       string `json:"notes"`
 	IsShared    bool   `json:"isShared"`
+}
+
+type UpdateRobboGroup struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 type UpdateRobboUnit struct {
@@ -182,11 +210,6 @@ type UserHTTP struct {
 type UsersList struct {
 	Users     []*UserHTTP `json:"users"`
 	CountRows int         `json:"countRows"`
-}
-
-type RobboUnitHTTPList struct {
-	RobboUnits []*RobboUnitHTTP `json:"robboUnits"`
-	CountRows  int              `json:"countRows"`
 }
 
 type Role string

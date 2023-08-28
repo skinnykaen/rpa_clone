@@ -23,11 +23,11 @@ func (r *RobboUnitHTTP) FromCore(robboUnit RobboUnitCore) {
 	r.City = robboUnit.City
 }
 
-func FromRobboUnitsCore(robboUnitsCore []RobboUnitCore) (projectPagesHttp []*RobboUnitHTTP) {
+func FromRobboUnitsCore(robboUnitsCore []RobboUnitCore) (robboUnitsHttp []*RobboUnitHTTP) {
 	for _, robboUnitCore := range robboUnitsCore {
 		var tmpRobboUnitHttp RobboUnitHTTP
 		tmpRobboUnitHttp.FromCore(robboUnitCore)
-		projectPagesHttp = append(projectPagesHttp, &tmpRobboUnitHttp)
+		robboUnitsHttp = append(robboUnitsHttp, &tmpRobboUnitHttp)
 	}
-	return
+	return robboUnitsHttp
 }

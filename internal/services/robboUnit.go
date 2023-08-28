@@ -31,7 +31,7 @@ func (r RobboUnitServiceImpl) GetAllRobboUnits(page, pageSize *int, clientRole m
 	if clientRole.String() == models.RoleSuperAdmin.String() {
 		return r.robboUnitGateway.GetAllRobboUnits(offset, limit)
 	}
-	// robbo units for unit admin
+	// TODO robbo units for unit admin
 	return
 }
 

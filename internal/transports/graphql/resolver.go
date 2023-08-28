@@ -13,6 +13,7 @@ type Resolver struct {
 	settingsService    services.SettingsService
 	parentRelService   services.ParentRelService
 	robboUnitService   services.RobboUnitService
+	robboGroupService  services.RobboGroupService
 }
 
 func SetupResolvers(
@@ -23,6 +24,7 @@ func SetupResolvers(
 	settingsService services.SettingsService,
 	parentRelService services.ParentRelService,
 	robboUnitService services.RobboUnitService,
+	robboGroupService services.RobboGroupService,
 ) Resolver {
 	return Resolver{
 		loggers:            loggers,
@@ -32,5 +34,6 @@ func SetupResolvers(
 		settingsService:    settingsService,
 		parentRelService:   parentRelService,
 		robboUnitService:   robboUnitService,
+		robboGroupService:  robboGroupService,
 	}
 }

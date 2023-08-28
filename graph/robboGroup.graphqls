@@ -1,0 +1,33 @@
+type RobboGroupHttp {
+	id: ID!
+	createdAt: Timestamp!
+	updatedAt: Timestamp!
+	name: String!
+	robboUnit: RobboUnitHttp!
+}
+
+input NewRobboGroup {
+	name: String!
+	robboUnitId: ID!
+}
+
+input UpdateRobboGroup {
+	id: ID!
+	name: String!
+}
+
+type RobboGroupHttpList {
+	robboGroups: [RobboGroupHttp!]!
+	countRows: Int!
+}
+
+extend type Query {
+	GetRobboGroupById(id: ID!): RobboGroupHttp @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
+	GetAllRobboGroupByAccessToken(page: Int, pageSize: Int): RobboGroupHttpList! @hasRole(roles: [SuperAdmin, UnitAdmin])
+}
+
+extend type Mutation {
+	CreateRobboGroup(input: NewRobboGroup!): RobboGroupHttp! @hasRole(roles: [SuperAdmin, UnitAdmin])
+	UpdateRobboGroup(input: UpdateRobboGroup!): RobboGroupHttp! @hasRole(roles: [SuperAdmin, UnitAdmin])
+	DeleteRobboGroup(id: ID!): Response! @hasRole(roles: [SuperAdmin, UnitAdmin])
+}
