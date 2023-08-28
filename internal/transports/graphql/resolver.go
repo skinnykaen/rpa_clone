@@ -11,6 +11,8 @@ type Resolver struct {
 	authService        services.AuthService
 	projectPageService services.ProjectPageService
 	settingsService    services.SettingsService
+	chatService        services.ChatService
+	messageService     services.MessageService
 }
 
 func SetupResolvers(
@@ -19,6 +21,8 @@ func SetupResolvers(
 	authService services.AuthService,
 	projectPageService services.ProjectPageService,
 	settingsService services.SettingsService,
+	chatService services.ChatService,
+	messageService services.MessageService,
 ) Resolver {
 	return Resolver{
 		loggers:            loggers,
@@ -26,5 +30,7 @@ func SetupResolvers(
 		authService:        authService,
 		projectPageService: projectPageService,
 		settingsService:    settingsService,
+		chatService:        chatService,
+		messageService:     messageService,
 	}
 }

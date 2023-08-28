@@ -34,14 +34,7 @@ type PageInfo {
 
 input NewMessage{
     payload: String!
-    sender: ID!
     receiver: ID!
-}
-
-type ChatMutationResult{
-    id: ID!
-    user1: ID!
-    user2: ID!
 }
 
 extend type Query {
@@ -50,7 +43,7 @@ extend type Query {
 
 extend type Mutation {
     PostMessage(input:NewMessage!): MessageHttp! @hasRole(roles: [SuperAdmin, Student])
-
+    UpdateMessage(id:ID!, payload: String!):MessageHttp!
     DeleteMessage(id:ID!):Response! @hasRole(roles: [SuperAdmin, Student])
 }
 

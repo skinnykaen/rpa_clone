@@ -48,7 +48,7 @@ func (m *MessageHTTP) FromCore(messageCore MessageCore) {
 	m.Receiver = &receiver
 
 	var sender UserHTTP
-	sender.FromCore(messageCore.Receiver)
+	sender.FromCore(messageCore.Sender)
 	m.Sender = &sender
 
 	m.Time = &messageCore.CreatedAt

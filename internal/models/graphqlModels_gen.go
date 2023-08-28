@@ -107,7 +107,6 @@ type NewChat struct {
 
 type NewMessage struct {
 	Payload  string `json:"payload"`
-	Sender   string `json:"sender"`
 	Receiver string `json:"receiver"`
 }
 

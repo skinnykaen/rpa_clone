@@ -9,6 +9,12 @@ input NewChat{
     user2: ID!
 }
 
+type ChatMutationResult{
+    id: ID!
+    user1: ID!
+    user2: ID!
+}
+
 extend type Query {
     Chats(user: ID): [ChatHttp!] @hasRole(roles: [SuperAdmin, Student])
 }

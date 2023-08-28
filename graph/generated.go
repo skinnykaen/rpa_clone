@@ -153,6 +153,7 @@ type ComplexityRoot struct {
 		SetUserIsActive     func(childComplexity int, id string, isActive bool) int
 		SignIn              func(childComplexity int, input models.SignIn) int
 		SignUp              func(childComplexity int, input models.SignUp) int
+		UpdateMessage       func(childComplexity int, id string, payload string) int
 		UpdateProjectPage   func(childComplexity int, input models.UpdateProjectPage) int
 		UpdateUser          func(childComplexity int, input models.UpdateUser) int
 	}
@@ -259,6 +260,7 @@ type MutationResolver interface {
 	CreateChat(ctx context.Context, input models.NewChat) (*models.ChatMutationResult, error)
 	DeleteChat(ctx context.Context, id string) (*models.Response, error)
 	PostMessage(ctx context.Context, input models.NewMessage) (*models.MessageHTTP, error)
+	UpdateMessage(ctx context.Context, id string, payload string) (*models.MessageHTTP, error)
 	DeleteMessage(ctx context.Context, id string) (*models.Response, error)
 	CreateParentRel(ctx context.Context, parentID string, childID string) (*models.Response, error)
 	DeleteParentRel(ctx context.Context, parentID string, childID string) (*models.Response, error)
@@ -872,6 +874,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.SignUp(childComplexity, args["input"].(models.SignUp)), true
+
+	case "Mutation.UpdateMessage":
+		if e.complexity.Mutation.UpdateMessage == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_UpdateMessage_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateMessage(childComplexity, args["id"].(string), args["payload"].(string)), true
 
 	case "Mutation.UpdateProjectPage":
 		if e.complexity.Mutation.UpdateProjectPage == nil {
@@ -1788,6 +1802,30 @@ func (ec *executionContext) field_Mutation_SignUp_args(ctx context.Context, rawA
 		}
 	}
 	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_UpdateMessage_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["payload"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("payload"))
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["payload"] = arg1
 	return args, nil
 }
 
@@ -5516,6 +5554,75 @@ func (ec *executionContext) fieldContext_Mutation_PostMessage(ctx context.Contex
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_PostMessage_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_UpdateMessage(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_UpdateMessage(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdateMessage(rctx, fc.Args["id"].(string), fc.Args["payload"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.MessageHTTP)
+	fc.Result = res
+	return ec.marshalNMessageHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐMessageHTTP(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_UpdateMessage(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_MessageHttp_id(ctx, field)
+			case "payload":
+				return ec.fieldContext_MessageHttp_payload(ctx, field)
+			case "sender":
+				return ec.fieldContext_MessageHttp_sender(ctx, field)
+			case "receiver":
+				return ec.fieldContext_MessageHttp_receiver(ctx, field)
+			case "chatID":
+				return ec.fieldContext_MessageHttp_chatID(ctx, field)
+			case "time":
+				return ec.fieldContext_MessageHttp_time(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type MessageHttp", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_UpdateMessage_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -11332,7 +11439,7 @@ func (ec *executionContext) unmarshalInputNewMessage(ctx context.Context, obj in
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"payload", "sender", "receiver"}
+	fieldsInOrder := [...]string{"payload", "receiver"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -11348,15 +11455,6 @@ func (ec *executionContext) unmarshalInputNewMessage(ctx context.Context, obj in
 				return it, err
 			}
 			it.Payload = data
-		case "sender":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sender"))
-			data, err := ec.unmarshalNID2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Sender = data
 		case "receiver":
 			var err error
 
@@ -12418,6 +12516,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "PostMessage":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_PostMessage(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "UpdateMessage":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_UpdateMessage(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++

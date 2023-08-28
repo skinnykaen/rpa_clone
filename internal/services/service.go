@@ -12,6 +12,8 @@ type Services struct {
 	ProjectService     ProjectService
 	ProjectPageService ProjectPageService
 	SettingsService    SettingsService
+	ChatService        ChatService
+	MessageService     MessageService
 }
 
 func SetupServices(
@@ -19,6 +21,8 @@ func SetupServices(
 	projectGateway gateways.ProjectGateway,
 	projectPageGateway gateways.ProjectPageGateway,
 	settingsGateway gateways.SettingsGateway,
+	chatGateway gateways.ChatGateway,
+	messageGateWay gateways.MessageGateway,
 ) Services {
 	return Services{
 		UserService: &UserServiceImpl{
@@ -37,6 +41,14 @@ func SetupServices(
 		},
 		SettingsService: &SettingsServiceImpl{
 			settingsGateway: settingsGateway,
+		},
+		ChatService: &ChatServiceImpl{
+			chatGateway: chatGateway,
+		},
+		MessageService: &MessageServiceImpl{
+			messageGateway: messageGateWay,
+			getterChat:     chatGateway,
+			getterUserByID: userGateway,
 		},
 	}
 }

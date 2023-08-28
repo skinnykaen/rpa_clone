@@ -7,18 +7,127 @@ package resolvers
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"strconv"
 
+	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/models"
+	"github.com/skinnykaen/rpa_clone/pkg/utils"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
 // PostMessage is the resolver for the PostMessage field.
 func (r *mutationResolver) PostMessage(ctx context.Context, input models.NewMessage) (*models.MessageHTTP, error) {
-	panic(fmt.Errorf("not implemented: PostMessage - PostMessage"))
+
+	senderID := ctx.Value(consts.KeyId).(uint)
+	receiverID, err := strconv.Atoi(input.Receiver)
+
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusBadRequest,
+					Message: consts.ErrAtoi,
+				},
+			},
+		}
+	}
+
+	message := models.MessageCore{
+		Payload:    input.Payload,
+		SenderID:   senderID,
+		Sender:     models.UserCore{ID: senderID},
+		ReceiverID: uint(receiverID),
+		Receiver:   models.UserCore{ID: uint(receiverID)},
+	}
+
+	message, err = r.messageService.PostMessage(message, ctx.Value(consts.KeyRole).(models.Role))
+
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusInternalServerError,
+					Message: err.Error(),
+				},
+			},
+		}
+	}
+
+	var messageHttp models.MessageHTTP
+	messageHttp.FromCore(message)
+	return &messageHttp, nil
+}
+
+// UpdateMessage is the resolver for the UpdateMessage field.
+func (r *mutationResolver) UpdateMessage(ctx context.Context, id string, payload string) (*models.MessageHTTP, error) {
+
+	mesID, err := strconv.Atoi(id)
+
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusBadRequest,
+					Message: consts.ErrAtoi,
+				},
+			},
+		}
+	}
+
+	message, err := r.messageService.UpdateMessage(uint(mesID), payload, ctx.Value(consts.KeyId).(uint))
+
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusInternalServerError,
+					Message: err.Error(),
+				},
+			},
+		}
+	}
+
+	var messageHttp models.MessageHTTP
+	messageHttp.FromCore(message)
+	return &messageHttp, nil
 }
 
 // DeleteMessage is the resolver for the DeleteMessage field.
 func (r *mutationResolver) DeleteMessage(ctx context.Context, id string) (*models.Response, error) {
-	panic(fmt.Errorf("not implemented: DeleteMessage - DeleteMessage"))
+	mesID, err := strconv.Atoi(id)
+
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return &models.Response{Ok: false}, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusBadRequest,
+					Message: consts.ErrAtoi,
+				},
+			},
+		}
+	}
+
+	err = r.messageService.DeleteMessage(uint(mesID), ctx.Value(consts.KeyId).(uint))
+
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return &models.Response{Ok: false}, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusInternalServerError,
+					Message: err.Error(),
+				},
+			},
+		}
+	}
+
+	return &models.Response{Ok: true}, err
 }
 
 // MessagesFromUser is the resolver for the MessagesFromUser field.
