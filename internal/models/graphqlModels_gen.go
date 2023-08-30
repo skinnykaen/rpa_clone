@@ -75,12 +75,6 @@ type MediaHTTP struct {
 	URI string `json:"uri"`
 }
 
-type MessageConnection struct {
-	Edges      []*MessageEdge `json:"edges,omitempty"`
-	PageInfo   *PageInfo      `json:"pageInfo"`
-	TotalCount *int           `json:"totalCount,omitempty"`
-}
-
 type MessageEdge struct {
 	Node   *MessageHTTP `json:"node,omitempty"`
 	Cursor string       `json:"cursor"`

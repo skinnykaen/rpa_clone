@@ -1,6 +1,8 @@
 package models
 
 import (
+	"encoding/base64"
+	"fmt"
 	"gorm.io/gorm"
 	"strconv"
 	"time"
@@ -52,4 +54,26 @@ func (m *MessageHTTP) FromCore(messageCore MessageCore) {
 	m.Sender = &sender
 
 	m.Time = &messageCore.CreatedAt
+}
+
+type MessageConnection struct {
+	Messages []*MessageHTTP
+	From     int
+	To       int
+}
+
+func (u *MessageConnection) TotalCount() int {
+	return len(u.Messages)
+}
+
+func (u *MessageConnection) PageInfo() PageInfo {
+	return PageInfo{
+		StartCursor: EncodeCursor(u.From),
+		EndCursor:   EncodeCursor(u.To - 1),
+		HasNextPage: u.To < len(u.Messages),
+	}
+}
+
+func EncodeCursor(i int) string {
+	return base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("cursor%d", i+1)))
 }

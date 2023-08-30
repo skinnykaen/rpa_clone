@@ -39,6 +39,7 @@ type Config struct {
 }
 
 type ResolverRoot interface {
+	MessageConnection() MessageConnectionResolver
 	Mutation() MutationResolver
 	Query() QueryResolver
 	Subscription() SubscriptionResolver
@@ -207,7 +208,7 @@ type ComplexityRoot struct {
 		GetUserByAccessToken            func(childComplexity int) int
 		GetUserByID                     func(childComplexity int, id string) int
 		Me                              func(childComplexity int) int
-		MessagesFromUser                func(childComplexity int, input models.MessagesFromUserInput, first *int, after *string) int
+		MessagesFromUser                func(childComplexity int, input models.MessagesFromUserInput, count *int, cursor *string) int
 	}
 
 	Response struct {
@@ -248,6 +249,9 @@ type ComplexityRoot struct {
 	}
 }
 
+type MessageConnectionResolver interface {
+	Edges(ctx context.Context, obj *models.MessageConnection) ([]*models.MessageEdge, error)
+}
 type MutationResolver interface {
 	CreateUser(ctx context.Context, input models.NewUser) (*models.UserHTTP, error)
 	UpdateUser(ctx context.Context, input models.UpdateUser) (*models.UserHTTP, error)
@@ -278,7 +282,7 @@ type QueryResolver interface {
 	Chats(ctx context.Context, user *string) ([]*models.ChatHTTP, error)
 	GetCourseByID(ctx context.Context, id string) (*models.CourseHTTP, error)
 	GetCoursesByUser(ctx context.Context) (*models.CoursesListHTTP, error)
-	MessagesFromUser(ctx context.Context, input models.MessagesFromUserInput, first *int, after *string) (*models.MessageConnection, error)
+	MessagesFromUser(ctx context.Context, input models.MessagesFromUserInput, count *int, cursor *string) (*models.MessageConnection, error)
 	GetChildrenByParent(ctx context.Context, parentID string) (*models.UsersList, error)
 	GetParentsByChild(ctx context.Context, childID string) (*models.UsersList, error)
 	GetProjectPageByID(ctx context.Context, id string) (*models.ProjectPageHTTP, error)
@@ -1218,7 +1222,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.MessagesFromUser(childComplexity, args["input"].(models.MessagesFromUserInput), args["first"].(*int), args["after"].(*string)), true
+		return e.complexity.Query.MessagesFromUser(childComplexity, args["input"].(models.MessagesFromUserInput), args["count"].(*int), args["cursor"].(*string)), true
 
 	case "Response.ok":
 		if e.complexity.Response.Ok == nil {
@@ -2061,23 +2065,23 @@ func (ec *executionContext) field_Query_MessagesFromUser_args(ctx context.Contex
 	}
 	args["input"] = arg0
 	var arg1 *int
-	if tmp, ok := rawArgs["first"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("first"))
+	if tmp, ok := rawArgs["count"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("count"))
 		arg1, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["first"] = arg1
+	args["count"] = arg1
 	var arg2 *string
-	if tmp, ok := rawArgs["after"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("after"))
+	if tmp, ok := rawArgs["cursor"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("cursor"))
 		arg2, err = ec.unmarshalOID2ᚖstring(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["after"] = arg2
+	args["cursor"] = arg2
 	return args, nil
 }
 
@@ -4141,7 +4145,7 @@ func (ec *executionContext) _MessageConnection_edges(ctx context.Context, field 
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Edges, nil
+		return ec.resolvers.MessageConnection().Edges(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4159,8 +4163,8 @@ func (ec *executionContext) fieldContext_MessageConnection_edges(ctx context.Con
 	fc = &graphql.FieldContext{
 		Object:     "MessageConnection",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "node":
@@ -4188,7 +4192,7 @@ func (ec *executionContext) _MessageConnection_pageInfo(ctx context.Context, fie
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.PageInfo, nil
+		return obj.PageInfo(), nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4200,16 +4204,16 @@ func (ec *executionContext) _MessageConnection_pageInfo(ctx context.Context, fie
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*models.PageInfo)
+	res := resTmp.(models.PageInfo)
 	fc.Result = res
-	return ec.marshalNPageInfo2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐPageInfo(ctx, field.Selections, res)
+	return ec.marshalNPageInfo2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐPageInfo(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_MessageConnection_pageInfo(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "MessageConnection",
 		Field:      field,
-		IsMethod:   false,
+		IsMethod:   true,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
@@ -4240,7 +4244,7 @@ func (ec *executionContext) _MessageConnection_totalCount(ctx context.Context, f
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.TotalCount, nil
+		return obj.TotalCount(), nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4249,16 +4253,16 @@ func (ec *executionContext) _MessageConnection_totalCount(ctx context.Context, f
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*int)
+	res := resTmp.(int)
 	fc.Result = res
-	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+	return ec.marshalOInt2int(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_MessageConnection_totalCount(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "MessageConnection",
 		Field:      field,
-		IsMethod:   false,
+		IsMethod:   true,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int does not have child fields")
@@ -7988,7 +7992,7 @@ func (ec *executionContext) _Query_MessagesFromUser(ctx context.Context, field g
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().MessagesFromUser(rctx, fc.Args["input"].(models.MessagesFromUserInput), fc.Args["first"].(*int), fc.Args["after"].(*string))
+			return ec.resolvers.Query().MessagesFromUser(rctx, fc.Args["input"].(models.MessagesFromUserInput), fc.Args["count"].(*int), fc.Args["cursor"].(*string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "Student"})
@@ -12291,11 +12295,42 @@ func (ec *executionContext) _MessageConnection(ctx context.Context, sel ast.Sele
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("MessageConnection")
 		case "edges":
-			out.Values[i] = ec._MessageConnection_edges(ctx, field, obj)
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._MessageConnection_edges(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "pageInfo":
 			out.Values[i] = ec._MessageConnection_pageInfo(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "totalCount":
 			out.Values[i] = ec._MessageConnection_totalCount(ctx, field, obj)
@@ -14017,14 +14052,8 @@ func (ec *executionContext) unmarshalNNewUser2githubᚗcomᚋskinnykaenᚋrpa_cl
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNPageInfo2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐPageInfo(ctx context.Context, sel ast.SelectionSet, v *models.PageInfo) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._PageInfo(ctx, sel, v)
+func (ec *executionContext) marshalNPageInfo2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐPageInfo(ctx context.Context, sel ast.SelectionSet, v models.PageInfo) graphql.Marshaler {
+	return ec._PageInfo(ctx, sel, &v)
 }
 
 func (ec *executionContext) marshalNProjectPageHttp2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐProjectPageHTTP(ctx context.Context, sel ast.SelectionSet, v models.ProjectPageHTTP) graphql.Marshaler {
@@ -14688,6 +14717,16 @@ func (ec *executionContext) marshalOImageHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa
 		return graphql.Null
 	}
 	return ec._ImageHttp(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOInt2int(ctx context.Context, v interface{}) (int, error) {
+	res, err := graphql.UnmarshalInt(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOInt2int(ctx context.Context, sel ast.SelectionSet, v int) graphql.Marshaler {
+	res := graphql.MarshalInt(v)
+	return res
 }
 
 func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v interface{}) (*int, error) {

@@ -38,7 +38,7 @@ input NewMessage{
 }
 
 extend type Query {
-    MessagesFromUser(input:MessagesFromUserInput!, first: Int, after:ID):MessageConnection! @hasRole(roles: [SuperAdmin, Student])
+    MessagesFromUser(input:MessagesFromUserInput!, count: Int, cursor:ID):MessageConnection! @hasRole(roles: [SuperAdmin, Student])
 }
 
 extend type Mutation {

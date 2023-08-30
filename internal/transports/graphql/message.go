@@ -6,19 +6,32 @@ package resolvers
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strconv"
 
+	"github.com/skinnykaen/rpa_clone/graph"
 	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/models"
 	"github.com/skinnykaen/rpa_clone/pkg/utils"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
+// Edges is the resolver for the edges field.
+func (r *messageConnectionResolver) Edges(ctx context.Context, obj *models.MessageConnection) ([]*models.MessageEdge, error) {
+	edges := make([]*models.MessageEdge, obj.To-obj.From)
+
+	for i := range edges {
+		edges[i] = &models.MessageEdge{
+			Node:   obj.Messages[obj.From+i],
+			Cursor: models.EncodeCursor(obj.From + i),
+		}
+	}
+
+	return edges, nil
+}
+
 // PostMessage is the resolver for the PostMessage field.
 func (r *mutationResolver) PostMessage(ctx context.Context, input models.NewMessage) (*models.MessageHTTP, error) {
-
 	senderID := ctx.Value(consts.KeyId).(uint)
 	receiverID, err := strconv.Atoi(input.Receiver)
 
@@ -63,7 +76,6 @@ func (r *mutationResolver) PostMessage(ctx context.Context, input models.NewMess
 
 // UpdateMessage is the resolver for the UpdateMessage field.
 func (r *mutationResolver) UpdateMessage(ctx context.Context, id string, payload string) (*models.MessageHTTP, error) {
-
 	mesID, err := strconv.Atoi(id)
 
 	if err != nil {
@@ -131,6 +143,67 @@ func (r *mutationResolver) DeleteMessage(ctx context.Context, id string) (*model
 }
 
 // MessagesFromUser is the resolver for the MessagesFromUser field.
-func (r *queryResolver) MessagesFromUser(ctx context.Context, input models.MessagesFromUserInput, first *int, after *string) (*models.MessageConnection, error) {
-	panic(fmt.Errorf("not implemented: MessagesFromUser - MessagesFromUser"))
+func (r *queryResolver) MessagesFromUser(ctx context.Context, input models.MessagesFromUserInput, count *int, cursor *string) (*models.MessageConnection, error) {
+	reseiverID, err := strconv.Atoi(input.Receiver)
+
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusBadRequest,
+					Message: consts.ErrAtoi,
+				},
+			},
+		}
+	}
+
+	senderID, err := strconv.Atoi(input.Sender)
+
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusBadRequest,
+					Message: consts.ErrAtoi,
+				},
+			},
+		}
+	}
+
+	messagesFromUser, from, to, err := r.messageService.MessagesFromUser(uint(reseiverID), uint(senderID), count, cursor,
+		ctx.Value(consts.KeyId).(uint))
+
+	if err != nil {
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusInternalServerError,
+					Message: err.Error(),
+				},
+			},
+		}
+	}
+
+	res := make([]*models.MessageHTTP, len(messagesFromUser))
+
+	for i, message := range messagesFromUser {
+		var mes models.MessageHTTP
+		mes.FromCore(message)
+		res[i] = &mes
+	}
+
+	return &models.MessageConnection{
+		Messages: res,
+		From:     from,
+		To:       to,
+	}, nil
 }
+
+// MessageConnection returns graph.MessageConnectionResolver implementation.
+func (r *Resolver) MessageConnection() graph.MessageConnectionResolver {
+	return &messageConnectionResolver{r}
+}
+
+type messageConnectionResolver struct{ *Resolver }

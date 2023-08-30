@@ -12,7 +12,7 @@ type MessageGateway interface {
 	DeleteMessage(id uint) error
 	UpdateMessage(id uint, payload string) (models.MessageCore, error)
 
-	MessagesFromUser(receiverId, senderId uint, count int, cursor string) ([]models.MessageCore, error)
+	MessagesFromUser(receiverId, senderId uint) ([]models.MessageCore, error)
 
 	GetMessageByID(messageID uint) (models.MessageCore, error)
 }
@@ -77,9 +77,20 @@ func (m MessageGatewayImpl) UpdateMessage(id uint, payload string) (models.Messa
 	return message, nil
 }
 
-func (m MessageGatewayImpl) MessagesFromUser(receiverId, senderId uint, count int, cursor string) ([]models.MessageCore, error) {
-	//TODO implement me
-	panic("implement me")
+func (m MessageGatewayImpl) MessagesFromUser(receiverId, senderId uint) ([]models.MessageCore, error) {
+	var messagesFromUser []models.MessageCore
+
+	err := m.postgresClient.Db.Preload("Receiver").Preload("Sender").
+		Where("sender_id = ? AND receiver_id = ?", senderId, receiverId).Order("id desc").Find(&messagesFromUser).Error
+
+	if err != nil {
+		return nil, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
+	}
+
+	return messagesFromUser, nil
 }
 
 func (m MessageGatewayImpl) GetMessageByID(messageID uint) (models.MessageCore, error) {

@@ -23,6 +23,7 @@ resolver:
     dir: internal/transports/graphql
     package: resolvers
     filename_template: "{name}.go"
+
   # Optional: turn on to not generate template comments above resolvers
   # omit_template_comment: false
 
@@ -63,7 +64,7 @@ resolver:
 # gqlgen will search for any type names in the schema in these go packages
 # if they match it will use them, otherwise it will generate them.
 autobind:
-#  - "rpa_clone/graph/model"
+   - "github.com/skinnykaen/rpa_clone/internal/models"
 
 # This section declares type mapping between the GraphQL and go type systems
 #
