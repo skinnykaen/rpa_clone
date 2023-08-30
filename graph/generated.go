@@ -138,7 +138,7 @@ type ComplexityRoot struct {
 
 	Mutation struct {
 		ConfirmActivation   func(childComplexity int, activationLink string) int
-		CreateChat          func(childComplexity int, input models.NewChat) int
+		CreateChat          func(childComplexity int, user string) int
 		CreateParentRel     func(childComplexity int, parentID string, childID string) int
 		CreateProjectPage   func(childComplexity int) int
 		CreateUser          func(childComplexity int, input models.NewUser) int
@@ -261,7 +261,7 @@ type MutationResolver interface {
 	SignIn(ctx context.Context, input models.SignIn) (*models.SignInResponse, error)
 	RefreshToken(ctx context.Context, refreshToken string) (*models.SignInResponse, error)
 	ConfirmActivation(ctx context.Context, activationLink string) (*models.SignInResponse, error)
-	CreateChat(ctx context.Context, input models.NewChat) (*models.ChatMutationResult, error)
+	CreateChat(ctx context.Context, user string) (*models.ChatMutationResult, error)
 	DeleteChat(ctx context.Context, id string) (*models.Response, error)
 	PostMessage(ctx context.Context, input models.NewMessage) (*models.MessageHTTP, error)
 	UpdateMessage(ctx context.Context, id string, payload string) (*models.MessageHTTP, error)
@@ -702,7 +702,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateChat(childComplexity, args["input"].(models.NewChat)), true
+		return e.complexity.Mutation.CreateChat(childComplexity, args["user"].(string)), true
 
 	case "Mutation.CreateParentRel":
 		if e.complexity.Mutation.CreateParentRel == nil {
@@ -1371,7 +1371,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	ec := executionContext{rc, e, 0, 0, make(chan graphql.DeferredResult)}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputMessagesFromUserInput,
-		ec.unmarshalInputNewChat,
 		ec.unmarshalInputNewMessage,
 		ec.unmarshalInputNewUser,
 		ec.unmarshalInputSignIn,
@@ -1551,15 +1550,15 @@ func (ec *executionContext) field_Mutation_ConfirmActivation_args(ctx context.Co
 func (ec *executionContext) field_Mutation_CreateChat_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 models.NewChat
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNNewChat2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐNewChat(ctx, tmp)
+	var arg0 string
+	if tmp, ok := rawArgs["user"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("user"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
+	args["user"] = arg0
 	return args, nil
 }
 
@@ -5316,7 +5315,7 @@ func (ec *executionContext) _Mutation_CreateChat(ctx context.Context, field grap
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().CreateChat(rctx, fc.Args["input"].(models.NewChat))
+			return ec.resolvers.Mutation().CreateChat(rctx, fc.Args["user"].(string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "Student"})
@@ -11398,44 +11397,6 @@ func (ec *executionContext) unmarshalInputMessagesFromUserInput(ctx context.Cont
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputNewChat(ctx context.Context, obj interface{}) (models.NewChat, error) {
-	var it models.NewChat
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"user1", "user2"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "user1":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("user1"))
-			data, err := ec.unmarshalNID2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.User1 = data
-		case "user2":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("user2"))
-			data, err := ec.unmarshalNID2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.User2 = data
-		}
-	}
-
-	return it, nil
-}
-
 func (ec *executionContext) unmarshalInputNewMessage(ctx context.Context, obj interface{}) (models.NewMessage, error) {
 	var it models.NewMessage
 	asMap := map[string]interface{}{}
@@ -14034,11 +13995,6 @@ func (ec *executionContext) marshalNMessageHttp2ᚖgithubᚗcomᚋskinnykaenᚋr
 
 func (ec *executionContext) unmarshalNMessagesFromUserInput2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐMessagesFromUserInput(ctx context.Context, v interface{}) (models.MessagesFromUserInput, error) {
 	res, err := ec.unmarshalInputMessagesFromUserInput(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalNNewChat2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐNewChat(ctx context.Context, v interface{}) (models.NewChat, error) {
-	res, err := ec.unmarshalInputNewChat(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 

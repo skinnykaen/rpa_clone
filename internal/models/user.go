@@ -20,6 +20,7 @@ type UserCore struct {
 	Nickname       string         `gorm:"not null;"`
 	IsActive       bool           `gorm:"not null;default:false;type:boolean;column:is_active"`
 	ActivationLink string
+	//chats          []ChatCore `gorm:"foreignKey:User1ID,User2ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
 func (u *UserHTTP) ToCore() UserCore {

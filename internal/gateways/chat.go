@@ -4,7 +4,6 @@ import (
 	"github.com/skinnykaen/rpa_clone/internal/db"
 	"github.com/skinnykaen/rpa_clone/internal/models"
 	"github.com/skinnykaen/rpa_clone/pkg/utils"
-	"gorm.io/gorm/clause"
 	"net/http"
 )
 
@@ -46,12 +45,12 @@ func (c ChatGatewayImpl) CreateChat(user1ID, user2ID uint) (models.ChatCore, err
 		User2:   models.UserCore{ID: user2ID},
 	}
 
-	err = c.postgresClient.Db.Clauses(clause.Returning{}).Unscoped().Save(&newChat).Error
+	err = c.postgresClient.Db.Omit("User1", "User2").Create(&newChat).Error
 
 	if err != nil {
 		return models.ChatCore{}, utils.ResponseError{
 			Code:    http.StatusInternalServerError,
-			Message: "creating chat error",
+			Message: err.Error(),
 		}
 	}
 

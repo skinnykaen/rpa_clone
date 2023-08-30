@@ -7,14 +7,52 @@ package resolvers
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"strconv"
 
 	"github.com/skinnykaen/rpa_clone/graph"
+	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/models"
+	"github.com/skinnykaen/rpa_clone/pkg/utils"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
 // CreateChat is the resolver for the CreateChat field.
-func (r *mutationResolver) CreateChat(ctx context.Context, input models.NewChat) (*models.ChatMutationResult, error) {
-	panic(fmt.Errorf("not implemented: CreateChat - CreateChat"))
+func (r *mutationResolver) CreateChat(ctx context.Context, user string) (*models.ChatMutationResult, error) {
+	user1ID := ctx.Value(consts.KeyId).(uint)
+	user2ID, err := strconv.Atoi(user)
+
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusBadRequest,
+					Message: consts.ErrAtoi,
+				},
+			},
+		}
+	}
+
+	chat, err := r.chatService.CreateChat(user1ID, uint(user2ID))
+
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusInternalServerError,
+					Message: err.Error(),
+				},
+			},
+		}
+	}
+
+	return &models.ChatMutationResult{
+		ID:    strconv.Itoa(int(chat.ID)),
+		User1: strconv.Itoa(int(chat.User1ID)),
+		User2: strconv.Itoa(int(chat.User2ID)),
+	}, nil
 }
 
 // DeleteChat is the resolver for the DeleteChat field.

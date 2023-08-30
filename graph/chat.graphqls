@@ -4,11 +4,6 @@ type ChatHttp {
     user2: UserHttp!
 }
 
-input NewChat{
-    user1: ID!
-    user2: ID!
-}
-
 type ChatMutationResult{
     id: ID!
     user1: ID!
@@ -20,7 +15,7 @@ extend type Query {
 }
 
 extend type Mutation {
-    CreateChat(input:NewChat!): ChatMutationResult! @hasRole(roles: [SuperAdmin, Student])
+    CreateChat(user:ID!): ChatMutationResult! @hasRole(roles: [SuperAdmin, Student])
 
     DeleteChat(id:ID!):Response! @hasRole(roles: [SuperAdmin, Student])
 }
