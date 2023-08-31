@@ -119,9 +119,7 @@ func (r *mutationResolver) DeleteMessage(ctx context.Context, id string) (*model
 		}
 	}
 
-	err = r.messageService.DeleteMessage(uint(mesID), ctx.Value(consts.KeyId).(uint))
-
-	if err != nil {
+	if err = r.messageService.DeleteMessage(uint(mesID), ctx.Value(consts.KeyId).(uint)); err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{

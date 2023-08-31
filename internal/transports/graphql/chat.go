@@ -70,9 +70,7 @@ func (r *mutationResolver) DeleteChat(ctx context.Context, chatID string) (*mode
 		}
 	}
 
-	err = r.chatService.DeleteChat(uint(id), userID)
-
-	if err != nil {
+	if err := r.chatService.DeleteChat(uint(id), userID); err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{

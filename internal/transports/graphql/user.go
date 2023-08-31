@@ -99,8 +99,8 @@ func (r *mutationResolver) DeleteUser(ctx context.Context, id string) (*models.R
 			},
 		}
 	}
-	err = r.userService.DeleteUser(uint(atoi))
-	if err != nil {
+
+	if err := r.userService.DeleteUser(uint(atoi)); err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{
