@@ -4,15 +4,15 @@ scalar Time
 type MessageHttp {
     id: ID!
     payload: String!
-    sender: UserHttp!
     receiver: UserHttp!
-    chatID: ID!
+    sender: UserHttp!
+    chatId: ID!
     time: Time
 }
 
 input MessagesFromUserInput{
-    receiver:ID!
-    sender:ID!
+    receiverId:ID!
+    senderId:ID!
 }
 
 type MessageEdge {
@@ -34,7 +34,7 @@ type PageInfo {
 
 input NewMessage{
     payload: String!
-    receiver: ID!
+    receiverId: ID!
 }
 
 extend type Query {

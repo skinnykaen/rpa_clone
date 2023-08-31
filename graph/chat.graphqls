@@ -6,8 +6,8 @@ type ChatHttp {
 
 type ChatMutationResult{
     id: ID!
-    user1: ID!
-    user2: ID!
+    user1Id: ID!
+    user2Id: ID!
 }
 
 extend type Query {
@@ -15,11 +15,11 @@ extend type Query {
 }
 
 extend type Mutation {
-    CreateChat(user:ID!): ChatMutationResult! @hasRole(roles: [SuperAdmin, Student])
+    CreateChat(userId:ID!): ChatMutationResult! @hasRole(roles: [SuperAdmin, Student])
 
-    DeleteChat(id:ID!):Response! @hasRole(roles: [SuperAdmin, Student])
+    DeleteChat(chatId:ID!):Response! @hasRole(roles: [SuperAdmin, Student])
 }
 
 type Subscription {
-    UserJoined(user: ID!, chat:ID!):MessageHttp! @hasRole(roles: [SuperAdmin, Student])
+    UserJoined(userId: ID!, chatId:ID!):MessageHttp! @hasRole(roles: [SuperAdmin, Student])
 }

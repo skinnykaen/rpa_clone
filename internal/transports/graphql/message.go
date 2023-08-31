@@ -33,7 +33,7 @@ func (r *messageConnectionResolver) Edges(ctx context.Context, obj *models.Messa
 // PostMessage is the resolver for the PostMessage field.
 func (r *mutationResolver) PostMessage(ctx context.Context, input models.NewMessage) (*models.MessageHTTP, error) {
 	senderID := ctx.Value(consts.KeyId).(uint)
-	receiverID, err := strconv.Atoi(input.Receiver)
+	receiverID, err := strconv.Atoi(input.ReceiverID)
 
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
@@ -135,7 +135,7 @@ func (r *mutationResolver) DeleteMessage(ctx context.Context, id string) (*model
 
 // MessagesFromUser is the resolver for the MessagesFromUser field.
 func (r *queryResolver) MessagesFromUser(ctx context.Context, input models.MessagesFromUserInput, count *int, cursor *string) (*models.MessageConnection, error) {
-	reseiverID, err := strconv.Atoi(input.Receiver)
+	reseiverID, err := strconv.Atoi(input.ReceiverID)
 
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
@@ -149,7 +149,7 @@ func (r *queryResolver) MessagesFromUser(ctx context.Context, input models.Messa
 		}
 	}
 
-	senderID, err := strconv.Atoi(input.Sender)
+	senderID, err := strconv.Atoi(input.SenderID)
 
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())

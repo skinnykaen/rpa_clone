@@ -18,9 +18,9 @@ import (
 )
 
 // CreateChat is the resolver for the CreateChat field.
-func (r *mutationResolver) CreateChat(ctx context.Context, user string) (*models.ChatMutationResult, error) {
+func (r *mutationResolver) CreateChat(ctx context.Context, userID string) (*models.ChatMutationResult, error) {
 	user1ID := ctx.Value(consts.KeyId).(uint)
-	user2ID, err := strconv.Atoi(user)
+	user2ID, err := strconv.Atoi(userID)
 
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
@@ -46,17 +46,17 @@ func (r *mutationResolver) CreateChat(ctx context.Context, user string) (*models
 	}
 
 	return &models.ChatMutationResult{
-		ID:    strconv.Itoa(int(chat.ID)),
-		User1: strconv.Itoa(int(chat.User1ID)),
-		User2: strconv.Itoa(int(chat.User2ID)),
+		ID:      strconv.Itoa(int(chat.ID)),
+		User1Id: strconv.Itoa(int(chat.User1ID)),
+		User2Id: strconv.Itoa(int(chat.User2ID)),
 	}, nil
 }
 
 // DeleteChat is the resolver for the DeleteChat field.
-func (r *mutationResolver) DeleteChat(ctx context.Context, id string) (*models.Response, error) {
+func (r *mutationResolver) DeleteChat(ctx context.Context, chatID string) (*models.Response, error) {
 	userID := ctx.Value(consts.KeyId).(uint)
 
-	chatID, err := strconv.Atoi(id)
+	id, err := strconv.Atoi(chatID)
 
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
@@ -70,7 +70,7 @@ func (r *mutationResolver) DeleteChat(ctx context.Context, id string) (*models.R
 		}
 	}
 
-	err = r.chatService.DeleteChat(uint(chatID), userID)
+	err = r.chatService.DeleteChat(uint(id), userID)
 
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
@@ -111,7 +111,7 @@ func (r *queryResolver) Chats(ctx context.Context) ([]*models.ChatHTTP, error) {
 }
 
 // UserJoined is the resolver for the UserJoined field.
-func (r *subscriptionResolver) UserJoined(ctx context.Context, user string, chat string) (<-chan *models.MessageHTTP, error) {
+func (r *subscriptionResolver) UserJoined(ctx context.Context, userID string, chatID string) (<-chan *models.MessageHTTP, error) {
 	panic(fmt.Errorf("not implemented: UserJoined - UserJoined"))
 }
 

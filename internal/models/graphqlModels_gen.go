@@ -22,9 +22,9 @@ type ChatHTTP struct {
 }
 
 type ChatMutationResult struct {
-	ID    string `json:"id"`
-	User1 string `json:"user1"`
-	User2 string `json:"user2"`
+	ID      string `json:"id"`
+	User1Id string `json:"user1Id"`
+	User2Id string `json:"user2Id"`
 }
 
 type CourseAPIMediaCollectionHTTP struct {
@@ -83,20 +83,20 @@ type MessageEdge struct {
 type MessageHTTP struct {
 	ID       string     `json:"id"`
 	Payload  string     `json:"payload"`
-	Sender   *UserHTTP  `json:"sender"`
 	Receiver *UserHTTP  `json:"receiver"`
-	ChatID   string     `json:"chatID"`
+	Sender   *UserHTTP  `json:"sender"`
+	ChatID   string     `json:"chatId"`
 	Time     *time.Time `json:"time,omitempty"`
 }
 
 type MessagesFromUserInput struct {
-	Receiver string `json:"receiver"`
-	Sender   string `json:"sender"`
+	ReceiverID string `json:"receiverId"`
+	SenderID   string `json:"senderId"`
 }
 
 type NewMessage struct {
-	Payload  string `json:"payload"`
-	Receiver string `json:"receiver"`
+	Payload    string `json:"payload"`
+	ReceiverID string `json:"receiverId"`
 }
 
 type NewUser struct {

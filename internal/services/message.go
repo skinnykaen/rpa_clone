@@ -62,14 +62,7 @@ func (m MessageServiceImpl) PostMessage(message models.MessageCore, clientRole m
 	message.Chat = chat
 	message.ChatID = chat.ID
 
-	message, err = m.messageGateway.PostMessage(message)
-
-	if err != nil {
-		return models.MessageCore{}, err
-	}
-
-	return message, nil
-
+	return m.messageGateway.PostMessage(message)
 }
 
 func (m MessageServiceImpl) DeleteMessage(id, userID uint) error {
