@@ -61,10 +61,7 @@ func (r *mutationResolver) PostMessage(ctx context.Context, input models.NewMess
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{
-				"err": utils.ResponseError{
-					Code:    http.StatusInternalServerError,
-					Message: err.Error(),
-				},
+				"err": err,
 			},
 		}
 	}
@@ -96,10 +93,7 @@ func (r *mutationResolver) UpdateMessage(ctx context.Context, id string, payload
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{
-				"err": utils.ResponseError{
-					Code:    http.StatusInternalServerError,
-					Message: err.Error(),
-				},
+				"err": err,
 			},
 		}
 	}
@@ -129,12 +123,9 @@ func (r *mutationResolver) DeleteMessage(ctx context.Context, id string) (*model
 
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return &models.Response{Ok: false}, &gqlerror.Error{
+		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{
-				"err": utils.ResponseError{
-					Code:    http.StatusInternalServerError,
-					Message: err.Error(),
-				},
+				"err": err,
 			},
 		}
 	}
@@ -176,12 +167,10 @@ func (r *queryResolver) MessagesFromUser(ctx context.Context, input models.Messa
 		ctx.Value(consts.KeyId).(uint))
 
 	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{
-				"err": utils.ResponseError{
-					Code:    http.StatusInternalServerError,
-					Message: err.Error(),
-				},
+				"err": err,
 			},
 		}
 	}
