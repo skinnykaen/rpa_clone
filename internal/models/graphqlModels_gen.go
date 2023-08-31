@@ -27,6 +27,11 @@ type ChatMutationResult struct {
 	User2Id string `json:"user2Id"`
 }
 
+type ChatsList struct {
+	Chats     []*ChatHTTP `json:"chats"`
+	CountRows int         `json:"countRows"`
+}
+
 type CourseAPIMediaCollectionHTTP struct {
 	ID          string             `json:"id"`
 	BannerImage *AbsoluteMediaHTTP `json:"banner_image,omitempty"`

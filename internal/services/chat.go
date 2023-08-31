@@ -11,7 +11,7 @@ import (
 type ChatService interface {
 	CreateChat(user1ID, user2ID uint) (models.ChatCore, error)
 	DeleteChat(chatID, userID uint) error
-	Chats(userID uint) ([]models.ChatCore, error)
+	Chats(userID uint, page, pageSize *int) ([]models.ChatCore, uint, error)
 }
 
 type ChatServiceImpl struct {
@@ -23,7 +23,7 @@ func (c ChatServiceImpl) CreateChat(user1ID, user2ID uint) (models.ChatCore, err
 	if user1ID == user2ID {
 		return models.ChatCore{}, utils.ResponseError{
 			Code:    http.StatusForbidden,
-			Message: "creating chat with yourself"}
+			Message: consts.ErrChatWithYourself}
 	}
 
 	return c.chatGateway.CreateChat(user1ID, user2ID)
@@ -47,6 +47,9 @@ func (c ChatServiceImpl) DeleteChat(chatID, userID uint) error {
 	return c.chatGateway.DeleteChat(chatID)
 }
 
-func (c ChatServiceImpl) Chats(userID uint) ([]models.ChatCore, error) {
-	return c.chatGateway.Chats(userID)
+func (c ChatServiceImpl) Chats(userID uint, page, pageSize *int) ([]models.ChatCore, uint, error) {
+
+	offset, limit := utils.GetOffsetAndLimit(page, pageSize)
+
+	return c.chatGateway.Chats(userID, offset, limit)
 }

@@ -4,6 +4,11 @@ type ChatHttp {
     user2: UserHttp!
 }
 
+type ChatsList{
+    chats: [ChatHttp!]!
+    countRows: Int!
+}
+
 type ChatMutationResult{
     id: ID!
     user1Id: ID!
@@ -11,7 +16,7 @@ type ChatMutationResult{
 }
 
 extend type Query {
-    Chats: [ChatHttp!] @hasRole(roles: [SuperAdmin, Student])
+    Chats(page: Int, pageSize: Int): ChatsList! @hasRole(roles: [SuperAdmin, Student])
 }
 
 extend type Mutation {

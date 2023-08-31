@@ -12,7 +12,7 @@ import (
 type ChatGateway interface {
 	CreateChat(user1ID, user2ID uint) (models.ChatCore, error)
 	DeleteChat(chatID uint) error
-	Chats(userID uint) ([]models.ChatCore, error)
+	Chats(userID uint, offset, limit int) ([]models.ChatCore, uint, error)
 
 	ChatByUsers(user1ID, user2ID uint) (models.ChatCore, error)
 	ChatByID(chatID uint) (models.ChatCore, error)
@@ -70,18 +70,24 @@ func (c ChatGatewayImpl) DeleteChat(chatID uint) error {
 	return nil
 }
 
-func (c ChatGatewayImpl) Chats(userID uint) ([]models.ChatCore, error) {
+func (c ChatGatewayImpl) Chats(userID uint, offset, limit int) ([]models.ChatCore, uint, error) {
 	var chats []models.ChatCore
 
-	if err := c.postgresClient.Db.Preload("User1").Preload("User2").
-		Where("user1_id = ? OR user2_id = ?", userID, userID).Find(&chats).Error; err != nil {
-		return nil, utils.ResponseError{
+	result := c.postgresClient.Db.Preload("User1").Preload("User2").
+		Limit(limit).Offset(offset).
+		Where("user1_id = ? OR user2_id = ?", userID, userID).Find(&chats)
+
+	if err := result.Error; err != nil {
+		return nil, 0, utils.ResponseError{
 			Code:    http.StatusInternalServerError,
 			Message: err.Error(),
 		}
 	}
 
-	return chats, nil
+	var count int64
+	result.Count(&count)
+
+	return chats, uint(count), nil
 }
 
 func (c ChatGatewayImpl) ChatByUsers(user1ID, user2ID uint) (models.ChatCore, error) {

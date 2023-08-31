@@ -83,10 +83,10 @@ func (r *mutationResolver) DeleteChat(ctx context.Context, chatID string) (*mode
 }
 
 // Chats is the resolver for the Chats field.
-func (r *queryResolver) Chats(ctx context.Context) ([]*models.ChatHTTP, error) {
+func (r *queryResolver) Chats(ctx context.Context, page *int, pageSize *int) (*models.ChatsList, error) {
 	userID := ctx.Value(consts.KeyId).(uint)
 
-	chats, err := r.chatService.Chats(userID)
+	chats, countRows, err := r.chatService.Chats(userID, page, pageSize)
 
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
@@ -105,7 +105,10 @@ func (r *queryResolver) Chats(ctx context.Context) ([]*models.ChatHTTP, error) {
 		res[i] = &chatHttp
 	}
 
-	return res, nil
+	return &models.ChatsList{
+		Chats:     res,
+		CountRows: int(countRows),
+	}, nil
 }
 
 // UserJoined is the resolver for the UserJoined field.

@@ -21,6 +21,7 @@ const (
 	ErrProjectPageIsBanned = "the projectPage is banned. no access"
 	ErrAccessDenied        = "access denied"
 	ErrMessagingToYourself = "sending a message to yourself"
+	ErrChatWithYourself    = "creating chat with yourself"
 )
 
 // ErrActivationLinkUnavailable have http code 503
