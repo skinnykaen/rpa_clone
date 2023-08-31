@@ -23,7 +23,7 @@ func (c ChatServiceImpl) CreateChat(user1ID, user2ID uint) (models.ChatCore, err
 	if user1ID == user2ID {
 		return models.ChatCore{}, utils.ResponseError{
 			Code:    http.StatusForbidden,
-			Message: "sending a message to yourself"}
+			Message: "creating chat with yourself"}
 	}
 
 	return c.chatGateway.CreateChat(user1ID, user2ID)
