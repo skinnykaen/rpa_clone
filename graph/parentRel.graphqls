@@ -4,6 +4,6 @@ extend type Query {
 }
 
 extend type Mutation {
-	CreateParentRel(parentId: ID!, childId: ID!): Response! @hasRole(roles:[SuperAdmin])
+	CreateParentRel(coreRelId: ID!, targetRelId: ID!): Response! @hasRole(roles:[SuperAdmin])
 	DeleteParentRel(parentId: ID!, childId: ID!): Response! @hasRole(roles:[SuperAdmin])
 }

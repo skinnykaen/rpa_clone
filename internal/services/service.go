@@ -7,14 +7,16 @@ import (
 
 type Services struct {
 	fx.Out
-	UserService        UserService
-	AuthService        AuthService
-	ProjectService     ProjectService
-	ProjectPageService ProjectPageService
-	SettingsService    SettingsService
-	ParentRelService   ParentRelService
-	RobboUnitService   RobboUnitService
-	RobboGroupService  RobboGroupService
+	UserService          UserService
+	AuthService          AuthService
+	ProjectService       ProjectService
+	ProjectPageService   ProjectPageService
+	SettingsService      SettingsService
+	ParentRelService     ParentRelService
+	RobboUnitService     RobboUnitService
+	RobboGroupService    RobboGroupService
+	RobboUnitRelService  RobboUnitRelService
+	RobboGroupRelService RobboGroupRelService
 }
 
 func SetupServices(
@@ -25,6 +27,8 @@ func SetupServices(
 	parentRelGateway gateways.ParentRelGateway,
 	robboUnitGateway gateways.RobboUnitGateway,
 	robboGroupGateway gateways.RobboGroupGateway,
+	robboUnitRelGateway gateways.RobboUnitRelGateway,
+	robboGroupRelGateway gateways.RobboGroupRelGateway,
 ) Services {
 	return Services{
 		UserService: &UserServiceImpl{
@@ -33,7 +37,6 @@ func SetupServices(
 		AuthService: &AuthServiceImpl{
 			userGateway:            userGateway,
 			getterActivationByLink: settingsGateway,
-			//settingsGateway: settingsGateway,
 		},
 		ProjectService: &ProjectServiceImpl{
 			projectGateway: projectGateway,
@@ -52,6 +55,12 @@ func SetupServices(
 		},
 		RobboGroupService: &RobboGroupServiceImpl{
 			robboGroupGateway: robboGroupGateway,
+		},
+		RobboUnitRelService: &RobboUnitRelServiceImpl{
+			robboUnitRelGateway: robboUnitRelGateway,
+		},
+		RobboGroupRelService: &RobboGroupRelServiceImpl{
+			robboGroupRelGateway: robboGroupRelGateway,
 		},
 	}
 }

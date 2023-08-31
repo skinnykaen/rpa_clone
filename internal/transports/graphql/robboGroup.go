@@ -6,13 +6,13 @@ package resolvers
 
 import (
 	"context"
-	"github.com/skinnykaen/rpa_clone/internal/consts"
-	"github.com/skinnykaen/rpa_clone/pkg/utils"
-	"github.com/vektah/gqlparser/v2/gqlerror"
 	"net/http"
 	"strconv"
 
+	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/models"
+	"github.com/skinnykaen/rpa_clone/pkg/utils"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
 // CreateRobboGroup is the resolver for the CreateRobboGroup field.
@@ -131,6 +131,35 @@ func (r *queryResolver) GetRobboGroupByID(ctx context.Context, id string) (*mode
 // GetAllRobboGroupByAccessToken is the resolver for the GetAllRobboGroupByAccessToken field.
 func (r *queryResolver) GetAllRobboGroupByAccessToken(ctx context.Context, page *int, pageSize *int) (*models.RobboGroupHTTPList, error) {
 	robboGroups, countRows, err := r.robboGroupService.GetAllRobboGroups(page, pageSize, ctx.Value(consts.KeyRole).(models.Role))
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
+	}
+	return &models.RobboGroupHTTPList{
+		RobboGroups: models.FromRobboGroupsCore(robboGroups),
+		CountRows:   int(countRows),
+	}, nil
+}
+
+// GetRobboGroupsByRobboUnitID is the resolver for the GetRobboGroupsByRobboUnitId field.
+func (r *queryResolver) GetRobboGroupsByRobboUnitID(ctx context.Context, page *int, pageSize *int, robboUnitID string) (*models.RobboGroupHTTPList, error) {
+	atoi, err := strconv.Atoi(robboUnitID)
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusBadRequest,
+					Message: consts.ErrAtoi,
+				},
+			},
+		}
+	}
+	robboGroups, countRows, err := r.robboGroupService.GetRobboGroupsByRobboUnitById(page, pageSize, uint(atoi))
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{

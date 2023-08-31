@@ -12,10 +12,17 @@ type RobboGroupService interface {
 	DeleteRobboGroup(id uint) error
 	UpdateRobboGroup(robboGroup models.RobboGroupCore) (models.RobboGroupCore, error)
 	GetAllRobboGroups(page, pageSize *int, clientRole models.Role) (robboGroups []models.RobboGroupCore, countRows uint, err error)
+	GetRobboGroupsByRobboUnitById(page, pageSize *int, robboUnitId uint) (robboGroups []models.RobboGroupCore, countRows uint, err error)
 }
 
 type RobboGroupServiceImpl struct {
-	robboGroupGateway gateways.RobboGroupGateway
+	robboGroupGateway    gateways.RobboGroupGateway
+	robboGroupRelGateway gateways.RobboGroupRelGateway
+}
+
+func (r RobboGroupServiceImpl) GetRobboGroupsByRobboUnitById(page, pageSize *int, robboUnitId uint) (robboGroups []models.RobboGroupCore, countRows uint, err error) {
+	offset, limit := utils.GetOffsetAndLimit(page, pageSize)
+	return r.robboGroupGateway.GetRobboGroupsByRobboUnitById(offset, limit, robboUnitId)
 }
 
 func (r RobboGroupServiceImpl) CreateRobboGroup(robboGroup models.RobboGroupCore) (models.RobboGroupCore, error) {

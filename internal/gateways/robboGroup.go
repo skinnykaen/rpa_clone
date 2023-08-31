@@ -15,10 +15,24 @@ type RobboGroupGateway interface {
 	DeleteRobboGroup(id uint) error
 	UpdateRobboGroup(robboGroup models.RobboGroupCore) (models.RobboGroupCore, error)
 	GetAllRobboGroups(offset, limit int) (robboGroups []models.RobboGroupCore, countRows uint, err error)
+	GetRobboGroupsByRobboUnitById(offset, limit int, robboUnitId uint) (robboGroups []models.RobboGroupCore, countRows uint, err error)
 }
 
 type RobboGroupGatewayImpl struct {
 	postgresClient db.PostgresClient
+}
+
+func (r RobboGroupGatewayImpl) GetRobboGroupsByRobboUnitById(offset, limit int, robboUnitId uint) (robboGroups []models.RobboGroupCore, countRows uint, err error) {
+	var count int64
+	result := r.postgresClient.Db.Preload("RobboUnit").Limit(limit).Offset(offset).Where("robbo_unit_id = ?", robboUnitId).Find(&robboGroups)
+	if result.Error != nil {
+		return []models.RobboGroupCore{}, 0, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: result.Error.Error(),
+		}
+	}
+	result.Count(&count)
+	return robboGroups, uint(count), result.Error
 }
 
 func (r RobboGroupGatewayImpl) CreateRobboGroup(robboGroup models.RobboGroupCore) (newRobboGroup models.RobboGroupCore, err error) {

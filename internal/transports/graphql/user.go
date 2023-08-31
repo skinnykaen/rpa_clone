@@ -208,6 +208,34 @@ func (r *queryResolver) GetAllUsers(ctx context.Context, page *int, pageSize *in
 	}, nil
 }
 
+// GetStudentsByRobboUnitID is the resolver for the GetStudentsByRobboUnitId field.
+func (r *queryResolver) GetStudentsByRobboUnitID(ctx context.Context, robboUnitID string) (*models.UsersList, error) {
+	atoi, err := strconv.Atoi(robboUnitID)
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusBadRequest,
+					Message: consts.ErrAtoi,
+				},
+			},
+		}
+	}
+	students, countRows, err := r.userService.GetStudentsByRobboUnitId(uint(atoi))
+	if err != nil {
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
+	}
+	return &models.UsersList{
+		Users:     models.FromUsersCore(students),
+		CountRows: int(countRows),
+	}, nil
+}
+
 // Mutation returns graph.MutationResolver implementation.
 func (r *Resolver) Mutation() graph.MutationResolver { return &mutationResolver{r} }
 

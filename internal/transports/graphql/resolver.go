@@ -6,14 +6,16 @@ import (
 )
 
 type Resolver struct {
-	loggers            logger.Loggers
-	userService        services.UserService
-	authService        services.AuthService
-	projectPageService services.ProjectPageService
-	settingsService    services.SettingsService
-	parentRelService   services.ParentRelService
-	robboUnitService   services.RobboUnitService
-	robboGroupService  services.RobboGroupService
+	loggers              logger.Loggers
+	userService          services.UserService
+	authService          services.AuthService
+	projectPageService   services.ProjectPageService
+	settingsService      services.SettingsService
+	parentRelService     services.ParentRelService
+	robboUnitService     services.RobboUnitService
+	robboGroupService    services.RobboGroupService
+	robboUnitRelService  services.RobboUnitRelService
+	robboGroupRelService services.RobboGroupRelService
 }
 
 func SetupResolvers(
@@ -25,15 +27,19 @@ func SetupResolvers(
 	parentRelService services.ParentRelService,
 	robboUnitService services.RobboUnitService,
 	robboGroupService services.RobboGroupService,
+	robboUnitRelService services.RobboUnitRelService,
+	robboGroupRelService services.RobboGroupRelService,
 ) Resolver {
 	return Resolver{
-		loggers:            loggers,
-		userService:        userService,
-		authService:        authService,
-		projectPageService: projectPageService,
-		settingsService:    settingsService,
-		parentRelService:   parentRelService,
-		robboUnitService:   robboUnitService,
-		robboGroupService:  robboGroupService,
+		loggers:              loggers,
+		userService:          userService,
+		authService:          authService,
+		projectPageService:   projectPageService,
+		settingsService:      settingsService,
+		parentRelService:     parentRelService,
+		robboUnitService:     robboUnitService,
+		robboGroupService:    robboGroupService,
+		robboUnitRelService:  robboUnitRelService,
+		robboGroupRelService: robboGroupRelService,
 	}
 }

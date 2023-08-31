@@ -1,0 +1,10 @@
+extend type Query {
+	GetStudentsByRobboGroupId(page: Int, pageSize: Int, robboGroupId: ID!): UsersList! @hasRole(roles:[SuperAdmin, Parent])
+	GetTeachersByRobboGroupId(page: Int, pageSize: Int, robboGroupId: ID!): UsersList! @hasRole(roles:[SuperAdmin, UnitAdmin])
+	GetRobboGroupsByUserId(userId: ID!): RobboGroupHttpList! @hasRole(roles:[SuperAdmin, UnitAdmin])
+}
+
+extend type Mutation {
+	CreateRobboGroupRel(coreRelId: ID!, targetRelId: ID!): Response! @hasRole(roles:[SuperAdmin, UnitAdmin])
+	DeleteRobboGroupRel(userId: ID!, robboGroupId: ID!): Response! @hasRole(roles:[SuperAdmin, UnitAdmin])
+}

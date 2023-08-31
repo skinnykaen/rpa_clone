@@ -16,10 +16,15 @@ type UserService interface {
 	GetAllUsers(page, pageSize *int, isActive bool, roles []models.Role, clientRole models.Role) (users []models.UserCore, countRows uint, err error)
 	GetUsersByEmail(page, pageSize *int, roles []models.Role, email string, clientRole models.Role) (users []models.UserCore, countRows uint, err error)
 	SetIsActive(id uint, isActive bool) error
+	GetStudentsByRobboUnitId(robboUnitId uint) (students []models.UserCore, countRows uint, err error)
 }
 
 type UserServiceImpl struct {
 	userGateway gateways.UserGateway
+}
+
+func (u UserServiceImpl) GetStudentsByRobboUnitId(robboUnitId uint) (students []models.UserCore, countRows uint, err error) {
+	return u.userGateway.GetStudentsByRobboUnitId(0, 0, robboUnitId)
 }
 
 func (u UserServiceImpl) GetUsersByEmail(page, pageSize *int, roles []models.Role, email string, clientRole models.Role) (users []models.UserCore, countRows uint, err error) {
