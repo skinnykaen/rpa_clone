@@ -40,10 +40,7 @@ func (r *mutationResolver) CreateChat(ctx context.Context, user string) (*models
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{
-				"err": utils.ResponseError{
-					Code:    http.StatusInternalServerError,
-					Message: err.Error(),
-				},
+				"err": err,
 			},
 		}
 	}
@@ -57,12 +54,60 @@ func (r *mutationResolver) CreateChat(ctx context.Context, user string) (*models
 
 // DeleteChat is the resolver for the DeleteChat field.
 func (r *mutationResolver) DeleteChat(ctx context.Context, id string) (*models.Response, error) {
-	panic(fmt.Errorf("not implemented: DeleteChat - DeleteChat"))
+	userID := ctx.Value(consts.KeyId).(uint)
+
+	chatID, err := strconv.Atoi(id)
+
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusBadRequest,
+					Message: consts.ErrAtoi,
+				},
+			},
+		}
+	}
+
+	err = r.chatService.DeleteChat(uint(chatID), userID)
+
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
+	}
+
+	return &models.Response{Ok: true}, nil
 }
 
 // Chats is the resolver for the Chats field.
-func (r *queryResolver) Chats(ctx context.Context, user *string) ([]*models.ChatHTTP, error) {
-	panic(fmt.Errorf("not implemented: Chats - Chats"))
+func (r *queryResolver) Chats(ctx context.Context) ([]*models.ChatHTTP, error) {
+	userID := ctx.Value(consts.KeyId).(uint)
+
+	chats, err := r.chatService.Chats(userID)
+
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
+	}
+
+	res := make([]*models.ChatHTTP, len(chats))
+
+	for i, chat := range chats {
+		var chatHttp models.ChatHTTP
+		chatHttp.FromCore(chat)
+		res[i] = &chatHttp
+	}
+
+	return res, nil
 }
 
 // UserJoined is the resolver for the UserJoined field.

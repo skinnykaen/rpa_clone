@@ -41,5 +41,5 @@ func (c *ChatHTTP) FromCore(chatCore ChatCore) {
 
 	var user2 UserHTTP
 	user2.FromCore(chatCore.User2)
-	c.User1 = &user2
+	c.User2 = &user2
 }

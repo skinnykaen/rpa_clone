@@ -11,7 +11,7 @@ type ChatMutationResult{
 }
 
 extend type Query {
-    Chats(user: ID): [ChatHttp!] @hasRole(roles: [SuperAdmin, Student])
+    Chats: [ChatHttp!] @hasRole(roles: [SuperAdmin, Student])
 }
 
 extend type Mutation {

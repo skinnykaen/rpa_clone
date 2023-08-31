@@ -10,9 +10,10 @@ import (
 type ChatGateway interface {
 	CreateChat(user1ID, user2ID uint) (models.ChatCore, error)
 	DeleteChat(chatID uint) error
-	Chats(userID *uint) ([]models.ChatCore, error)
+	Chats(userID uint) ([]models.ChatCore, error)
 
 	ChatByUsers(user1ID, user2ID uint) (models.ChatCore, error)
+	ChatByID(chatID uint) (models.ChatCore, error)
 }
 
 type ChatGatewayImpl struct {
@@ -58,13 +59,33 @@ func (c ChatGatewayImpl) CreateChat(user1ID, user2ID uint) (models.ChatCore, err
 }
 
 func (c ChatGatewayImpl) DeleteChat(chatID uint) error {
-	//TODO implement me
-	panic("implement me")
+
+	err := c.postgresClient.Db.Delete(&models.ChatCore{}, chatID).Error
+
+	if err != nil {
+		return utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
+	}
+
+	return nil
 }
 
-func (c ChatGatewayImpl) Chats(userID *uint) ([]models.ChatCore, error) {
-	//TODO implement me
-	panic("implement me")
+func (c ChatGatewayImpl) Chats(userID uint) ([]models.ChatCore, error) {
+	var chats []models.ChatCore
+
+	err := c.postgresClient.Db.Preload("User1").Preload("User2").
+		Where("user1_id = ? OR user2_id = ?", userID, userID).Find(&chats).Error
+
+	if err != nil {
+		return nil, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
+	}
+
+	return chats, nil
 }
 
 func (c ChatGatewayImpl) ChatByUsers(user1ID, user2ID uint) (models.ChatCore, error) {
@@ -76,14 +97,28 @@ func (c ChatGatewayImpl) ChatByUsers(user1ID, user2ID uint) (models.ChatCore, er
 	var chat models.ChatCore
 
 	err := c.postgresClient.Db.Where("user1_id = ? AND user2_id = ?",
-		user1ID, user2ID).First(&chat).Error
+		user1ID, user2ID).Preload("User1").Preload("User2").First(&chat).Error
 
 	if err != nil {
 		return models.ChatCore{}, utils.ResponseError{
 			Code:    http.StatusInternalServerError,
 			Message: err.Error(),
 		}
+	}
 
+	return chat, nil
+}
+
+func (c ChatGatewayImpl) ChatByID(chatID uint) (models.ChatCore, error) {
+	var chat models.ChatCore
+
+	err := c.postgresClient.Db.Preload("User1").Preload("User2").First(&chat, chatID).Error
+
+	if err != nil {
+		return models.ChatCore{}, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
 	}
 
 	return chat, nil
