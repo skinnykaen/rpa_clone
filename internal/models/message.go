@@ -53,7 +53,8 @@ func (m *MessageHTTP) FromCore(messageCore MessageCore) {
 	sender.FromCore(messageCore.Sender)
 	m.Sender = &sender
 
-	m.Time = &messageCore.CreatedAt
+	m.SentAt = messageCore.CreatedAt
+	m.UpdatedAt = &messageCore.UpdatedAt
 }
 
 type MessageConnection struct {

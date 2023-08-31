@@ -128,12 +128,13 @@ type ComplexityRoot struct {
 	}
 
 	MessageHttp struct {
-		ChatID   func(childComplexity int) int
-		ID       func(childComplexity int) int
-		Payload  func(childComplexity int) int
-		Receiver func(childComplexity int) int
-		Sender   func(childComplexity int) int
-		Time     func(childComplexity int) int
+		ChatID    func(childComplexity int) int
+		ID        func(childComplexity int) int
+		Payload   func(childComplexity int) int
+		Receiver  func(childComplexity int) int
+		Sender    func(childComplexity int) int
+		SentAt    func(childComplexity int) int
+		UpdatedAt func(childComplexity int) int
 	}
 
 	Mutation struct {
@@ -673,12 +674,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.MessageHttp.Sender(childComplexity), true
 
-	case "MessageHttp.time":
-		if e.complexity.MessageHttp.Time == nil {
+	case "MessageHttp.sentAt":
+		if e.complexity.MessageHttp.SentAt == nil {
 			break
 		}
 
-		return e.complexity.MessageHttp.Time(childComplexity), true
+		return e.complexity.MessageHttp.SentAt(childComplexity), true
+
+	case "MessageHttp.updatedAt":
+		if e.complexity.MessageHttp.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.MessageHttp.UpdatedAt(childComplexity), true
 
 	case "Mutation.ConfirmActivation":
 		if e.complexity.Mutation.ConfirmActivation == nil {
@@ -4296,8 +4304,10 @@ func (ec *executionContext) fieldContext_MessageEdge_node(ctx context.Context, f
 				return ec.fieldContext_MessageHttp_sender(ctx, field)
 			case "chatId":
 				return ec.fieldContext_MessageHttp_chatId(ctx, field)
-			case "time":
-				return ec.fieldContext_MessageHttp_time(ctx, field)
+			case "sentAt":
+				return ec.fieldContext_MessageHttp_sentAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_MessageHttp_updatedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type MessageHttp", field.Name)
 		},
@@ -4621,8 +4631,8 @@ func (ec *executionContext) fieldContext_MessageHttp_chatId(ctx context.Context,
 	return fc, nil
 }
 
-func (ec *executionContext) _MessageHttp_time(ctx context.Context, field graphql.CollectedField, obj *models.MessageHTTP) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_MessageHttp_time(ctx, field)
+func (ec *executionContext) _MessageHttp_sentAt(ctx context.Context, field graphql.CollectedField, obj *models.MessageHTTP) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_MessageHttp_sentAt(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -4635,7 +4645,51 @@ func (ec *executionContext) _MessageHttp_time(ctx context.Context, field graphql
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Time, nil
+		return obj.SentAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_MessageHttp_sentAt(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MessageHttp",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MessageHttp_updatedAt(ctx context.Context, field graphql.CollectedField, obj *models.MessageHTTP) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_MessageHttp_updatedAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UpdatedAt, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4649,7 +4703,7 @@ func (ec *executionContext) _MessageHttp_time(ctx context.Context, field graphql
 	return ec.marshalOTime2ᚖtimeᚐTime(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_MessageHttp_time(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_MessageHttp_updatedAt(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "MessageHttp",
 		Field:      field,
@@ -5523,8 +5577,10 @@ func (ec *executionContext) fieldContext_Mutation_PostMessage(ctx context.Contex
 				return ec.fieldContext_MessageHttp_sender(ctx, field)
 			case "chatId":
 				return ec.fieldContext_MessageHttp_chatId(ctx, field)
-			case "time":
-				return ec.fieldContext_MessageHttp_time(ctx, field)
+			case "sentAt":
+				return ec.fieldContext_MessageHttp_sentAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_MessageHttp_updatedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type MessageHttp", field.Name)
 		},
@@ -5592,8 +5648,10 @@ func (ec *executionContext) fieldContext_Mutation_UpdateMessage(ctx context.Cont
 				return ec.fieldContext_MessageHttp_sender(ctx, field)
 			case "chatId":
 				return ec.fieldContext_MessageHttp_chatId(ctx, field)
-			case "time":
-				return ec.fieldContext_MessageHttp_time(ctx, field)
+			case "sentAt":
+				return ec.fieldContext_MessageHttp_sentAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_MessageHttp_updatedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type MessageHttp", field.Name)
 		},
@@ -8893,8 +8951,10 @@ func (ec *executionContext) fieldContext_Subscription_UserJoined(ctx context.Con
 				return ec.fieldContext_MessageHttp_sender(ctx, field)
 			case "chatId":
 				return ec.fieldContext_MessageHttp_chatId(ctx, field)
-			case "time":
-				return ec.fieldContext_MessageHttp_time(ctx, field)
+			case "sentAt":
+				return ec.fieldContext_MessageHttp_sentAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_MessageHttp_updatedAt(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type MessageHttp", field.Name)
 		},
@@ -12364,8 +12424,13 @@ func (ec *executionContext) _MessageHttp(ctx context.Context, sel ast.SelectionS
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "time":
-			out.Values[i] = ec._MessageHttp_time(ctx, field, obj)
+		case "sentAt":
+			out.Values[i] = ec._MessageHttp_sentAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updatedAt":
+			out.Values[i] = ec._MessageHttp_updatedAt(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -14183,6 +14248,21 @@ func (ec *executionContext) unmarshalNString2string(ctx context.Context, v inter
 
 func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
 	res := graphql.MarshalString(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) unmarshalNTime2timeᚐTime(ctx context.Context, v interface{}) (time.Time, error) {
+	res, err := graphql.UnmarshalTime(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNTime2timeᚐTime(ctx context.Context, sel ast.SelectionSet, v time.Time) graphql.Marshaler {
+	res := graphql.MarshalTime(v)
 	if res == graphql.Null {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")

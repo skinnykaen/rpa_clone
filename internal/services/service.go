@@ -22,7 +22,7 @@ func SetupServices(
 	projectPageGateway gateways.ProjectPageGateway,
 	settingsGateway gateways.SettingsGateway,
 	chatGateway gateways.ChatGateway,
-	messageGateWay gateways.MessageGateway,
+	messageGateway gateways.MessageGateway,
 ) Services {
 	return Services{
 		UserService: &UserServiceImpl{
@@ -46,7 +46,7 @@ func SetupServices(
 			chatGateway: chatGateway,
 		},
 		MessageService: &MessageServiceImpl{
-			messageGateway: messageGateWay,
+			messageGateway: messageGateway,
 			getterChat:     chatGateway,
 			getterUserByID: userGateway,
 		},

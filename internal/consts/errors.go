@@ -20,6 +20,7 @@ const (
 	ErrUserIsNotActive     = "user is not active. please check your email"
 	ErrProjectPageIsBanned = "the projectPage is banned. no access"
 	ErrAccessDenied        = "access denied"
+	ErrMessagingToYourself = "sending a message to yourself"
 )
 
 // ErrActivationLinkUnavailable have http code 503

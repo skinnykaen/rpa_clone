@@ -22,14 +22,14 @@ type MessageService interface {
 type MessageServiceImpl struct {
 	messageGateway gateways.MessageGateway
 	getterUserByID GetterUserByID
-	getterChat     GetterChat
+	getterChat     ChatCreator
 }
 
 type GetterUserByID interface {
 	GetUserById(id uint) (user models.UserCore, err error)
 }
 
-type GetterChat interface {
+type ChatCreator interface {
 	CreateChat(user1ID, user2ID uint) (models.ChatCore, error)
 }
 
@@ -38,7 +38,8 @@ func (m MessageServiceImpl) PostMessage(message models.MessageCore, clientRole m
 	if message.SenderID == message.ReceiverID {
 		return models.MessageCore{}, utils.ResponseError{
 			Code:    http.StatusForbidden,
-			Message: "sending a message to yourself"}
+			Message: consts.ErrMessagingToYourself,
+		}
 	}
 
 	// Получаем роль получателя сообщения
@@ -150,18 +151,18 @@ func (m MessageServiceImpl) MessagesFromUser(receiverId, senderId uint, count *i
 	return messagesFromUser, from, to, nil
 }
 
-var Permissions = map[models.Role][]models.Role{
-	models.RoleAnonymous:  []models.Role{},
-	models.RoleStudent:    []models.Role{models.RoleStudent, models.RoleParent, models.RoleTeacher},
-	models.RoleParent:     []models.Role{models.RoleStudent, models.RoleTeacher, models.RoleUnitAdmin},
-	models.RoleTeacher:    []models.Role{models.RoleStudent, models.RoleParent, models.RoleTeacher, models.RoleUnitAdmin},
-	models.RoleUnitAdmin:  []models.Role{models.RoleParent, models.RoleTeacher, models.RoleUnitAdmin},
-	models.RoleSuperAdmin: models.AllRole,
-}
-
 func CheckAccessForMessaging(senderRole, receiverRole models.Role) error {
 
-	for _, role := range Permissions[senderRole] {
+	var messagingPermissions = map[models.Role][]models.Role{
+		models.RoleAnonymous:  []models.Role{},
+		models.RoleStudent:    []models.Role{models.RoleStudent, models.RoleParent, models.RoleTeacher},
+		models.RoleParent:     []models.Role{models.RoleStudent, models.RoleTeacher, models.RoleUnitAdmin},
+		models.RoleTeacher:    []models.Role{models.RoleStudent, models.RoleParent, models.RoleTeacher, models.RoleUnitAdmin},
+		models.RoleUnitAdmin:  []models.Role{models.RoleParent, models.RoleTeacher, models.RoleUnitAdmin},
+		models.RoleSuperAdmin: models.AllRole,
+	}
+
+	for _, role := range messagingPermissions[senderRole] {
 		if role == receiverRole {
 			return nil
 		}
@@ -169,5 +170,6 @@ func CheckAccessForMessaging(senderRole, receiverRole models.Role) error {
 
 	return utils.ResponseError{
 		Code:    http.StatusForbidden,
-		Message: consts.ErrAccessDenied}
+		Message: consts.ErrAccessDenied,
+	}
 }

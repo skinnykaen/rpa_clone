@@ -81,12 +81,13 @@ type MessageEdge struct {
 }
 
 type MessageHTTP struct {
-	ID       string     `json:"id"`
-	Payload  string     `json:"payload"`
-	Receiver *UserHTTP  `json:"receiver"`
-	Sender   *UserHTTP  `json:"sender"`
-	ChatID   string     `json:"chatId"`
-	Time     *time.Time `json:"time,omitempty"`
+	ID        string     `json:"id"`
+	Payload   string     `json:"payload"`
+	Receiver  *UserHTTP  `json:"receiver"`
+	Sender    *UserHTTP  `json:"sender"`
+	ChatID    string     `json:"chatId"`
+	SentAt    time.Time  `json:"sentAt"`
+	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
 }
 
 type MessagesFromUserInput struct {

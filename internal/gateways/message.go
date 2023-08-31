@@ -23,17 +23,13 @@ type MessageGatewayImpl struct {
 
 func (m MessageGatewayImpl) PostMessage(message models.MessageCore) (models.MessageCore, error) {
 
-	err := m.postgresClient.Db.Create(&message).Error
-
-	if err != nil {
+	if err := m.postgresClient.Db.Create(&message).Error; err != nil {
 		return models.MessageCore{}, utils.ResponseError{
 			Code:    http.StatusInternalServerError,
 			Message: err.Error()}
 	}
 
-	m.postgresClient.Db.Preload("Sender").Preload("Receiver").First(&message)
-
-	if err != nil {
+	if err := m.postgresClient.Db.Preload("Sender").Preload("Receiver").First(&message).Error; err != nil {
 		return models.MessageCore{}, utils.ResponseError{
 			Code:    http.StatusInternalServerError,
 			Message: err.Error()}
@@ -45,10 +41,7 @@ func (m MessageGatewayImpl) PostMessage(message models.MessageCore) (models.Mess
 
 func (m MessageGatewayImpl) DeleteMessage(id uint) error {
 
-	// TODO: удалять ли безвозвратно?
-	err := m.postgresClient.Db.Delete(&models.MessageCore{}, id).Error
-
-	if err != nil {
+	if err := m.postgresClient.Db.Delete(&models.MessageCore{}, id).Error; err != nil {
 		return utils.ResponseError{
 			Code:    http.StatusInternalServerError,
 			Message: err.Error(),
@@ -62,17 +55,21 @@ func (m MessageGatewayImpl) UpdateMessage(id uint, payload string) (models.Messa
 
 	var message models.MessageCore
 
-	err := m.postgresClient.Db.Model(&message).Where("id = ?", id).
-		Update("payload", payload).Error
-
-	if err != nil {
+	if err := m.postgresClient.Db.Model(&message).Where("id = ?", id).
+		Update("payload", payload).Error; err != nil {
 		return models.MessageCore{}, utils.ResponseError{
 			Code:    http.StatusInternalServerError,
 			Message: err.Error(),
 		}
 	}
 
-	m.postgresClient.Db.Preload("Sender").Preload("Receiver").First(&message)
+	if err := m.postgresClient.Db.Preload("Sender").Preload("Receiver").
+		First(&message).Error; err != nil {
+		return models.MessageCore{}, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
+	}
 
 	return message, nil
 }
@@ -80,10 +77,9 @@ func (m MessageGatewayImpl) UpdateMessage(id uint, payload string) (models.Messa
 func (m MessageGatewayImpl) MessagesFromUser(receiverId, senderId uint) ([]models.MessageCore, error) {
 	var messagesFromUser []models.MessageCore
 
-	err := m.postgresClient.Db.Preload("Receiver").Preload("Sender").
-		Where("sender_id = ? AND receiver_id = ?", senderId, receiverId).Order("id desc").Find(&messagesFromUser).Error
-
-	if err != nil {
+	if err := m.postgresClient.Db.Preload("Receiver").Preload("Sender").
+		Where("sender_id = ? AND receiver_id = ?", senderId, receiverId).
+		Order("id desc").Find(&messagesFromUser).Error; err != nil {
 		return nil, utils.ResponseError{
 			Code:    http.StatusInternalServerError,
 			Message: err.Error(),
@@ -96,7 +92,12 @@ func (m MessageGatewayImpl) MessagesFromUser(receiverId, senderId uint) ([]model
 func (m MessageGatewayImpl) GetMessageByID(messageID uint) (models.MessageCore, error) {
 	var message models.MessageCore
 
-	err := m.postgresClient.Db.First(&message, messageID).Error
+	if err := m.postgresClient.Db.First(&message, messageID).Error; err != nil {
+		return models.MessageCore{}, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
+	}
 
-	return message, err
+	return message, nil
 }
