@@ -23,7 +23,7 @@ type RobboGroupHttpList {
 
 extend type Query {
 	GetRobboGroupById(id: ID!): RobboGroupHttp @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
-	GetAllRobboGroupByAccessToken(page: Int, pageSize: Int): RobboGroupHttpList! @hasRole(roles: [SuperAdmin, UnitAdmin])
+	GetAllRobboGroupByAccessToken(page: Int, pageSize: Int): RobboGroupHttpList! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher])
 	GetRobboGroupsByRobboUnitId(page: Int, pageSize: Int, robboUnitId: ID!): RobboGroupHttpList! @hasRole(roles: [SuperAdmin, UnitAdmin])
 }
 

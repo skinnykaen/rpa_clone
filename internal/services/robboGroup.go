@@ -11,13 +11,18 @@ type RobboGroupService interface {
 	GetRobboGroupById(id uint) (robboGroup models.RobboGroupCore, err error)
 	DeleteRobboGroup(id uint) error
 	UpdateRobboGroup(robboGroup models.RobboGroupCore) (models.RobboGroupCore, error)
-	GetAllRobboGroups(page, pageSize *int, clientRole models.Role) (robboGroups []models.RobboGroupCore, countRows uint, err error)
+	GetAllRobboGroups(page, pageSize *int, clientId uint, clientRole models.Role) (robboGroups []models.RobboGroupCore, countRows uint, err error)
 	GetRobboGroupsByRobboUnitById(page, pageSize *int, robboUnitId uint) (robboGroups []models.RobboGroupCore, countRows uint, err error)
 }
 
+type robboGroupsByTeacherProvider interface {
+	GetRobboGroupsByUserId(userId uint) (robboGroups []models.RobboGroupCore, err error)
+}
+
 type RobboGroupServiceImpl struct {
-	robboGroupGateway    gateways.RobboGroupGateway
-	robboGroupRelGateway gateways.RobboGroupRelGateway
+	robboGroupGateway             gateways.RobboGroupGateway
+	robboUnitsByUnitAdminProvider robboUnitsByUnitAdminProvider
+	robboGroupsByTeacherProvider  robboGroupsByTeacherProvider
 }
 
 func (r RobboGroupServiceImpl) GetRobboGroupsByRobboUnitById(page, pageSize *int, robboUnitId uint) (robboGroups []models.RobboGroupCore, countRows uint, err error) {
@@ -41,8 +46,31 @@ func (r RobboGroupServiceImpl) UpdateRobboGroup(robboGroup models.RobboGroupCore
 	return r.robboGroupGateway.UpdateRobboGroup(robboGroup)
 }
 
-func (r RobboGroupServiceImpl) GetAllRobboGroups(page, pageSize *int, clientRole models.Role) (robboGroups []models.RobboGroupCore, countRows uint, err error) {
+func (r RobboGroupServiceImpl) GetAllRobboGroups(page, pageSize *int, clientId uint, clientRole models.Role) (robboGroups []models.RobboGroupCore, countRows uint, err error) {
 	offset, limit := utils.GetOffsetAndLimit(page, pageSize)
-	// TODO for unit admin get groups in own unit
-	return r.robboGroupGateway.GetAllRobboGroups(offset, limit)
+	switch clientRole.String() {
+	case models.RoleSuperAdmin.String():
+		return r.robboGroupGateway.GetAllRobboGroups(offset, limit)
+	case models.RoleUnitAdmin.String():
+		robboUnits, err := r.robboUnitsByUnitAdminProvider.GetRobboUnitsByUnitAdmin(clientId)
+		if err != nil {
+			return []models.RobboGroupCore{}, 0, err
+		}
+		for _, robboUnit := range robboUnits {
+			robboGroupsByRobboUnit, _, err := r.robboGroupGateway.GetRobboGroupsByRobboUnitById(0, 100, robboUnit.ID)
+			if err != nil {
+				return []models.RobboGroupCore{}, 0, err
+			}
+			robboGroups = append(robboGroups, robboGroupsByRobboUnit...)
+		}
+		return robboGroups, uint(len(robboGroups)), nil
+	case models.RoleTeacher.String():
+		robboGroups, err := r.robboGroupsByTeacherProvider.GetRobboGroupsByUserId(clientId)
+		if err != nil {
+			return []models.RobboGroupCore{}, 0, err
+		}
+		return robboGroups, uint(len(robboGroups)), nil
+	}
+
+	return robboGroups, countRows, nil
 }

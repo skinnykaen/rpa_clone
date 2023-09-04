@@ -193,7 +193,9 @@ func (r *queryResolver) GetUserByID(ctx context.Context, id string) (*models.Use
 
 // GetAllUsers is the resolver for the GetAllUsers field.
 func (r *queryResolver) GetAllUsers(ctx context.Context, page *int, pageSize *int, active bool, roles []models.Role) (*models.UsersList, error) {
-	users, countRows, err := r.userService.GetAllUsers(page, pageSize, active, roles, ctx.Value(consts.KeyRole).(models.Role))
+	clientId := ctx.Value(consts.KeyId).(uint)
+	clientRole := ctx.Value(consts.KeyRole).(models.Role)
+	users, countRows, err := r.userService.GetAllUsers(page, pageSize, active, roles, clientId, clientRole)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
 		return &models.UsersList{}, &gqlerror.Error{
@@ -222,7 +224,7 @@ func (r *queryResolver) GetStudentsByRobboUnitID(ctx context.Context, robboUnitI
 			},
 		}
 	}
-	students, countRows, err := r.userService.GetStudentsByRobboUnitId(uint(atoi))
+	students, err := r.robboUnitRelService.GetStudentsByRobboUnitId(uint(atoi))
 	if err != nil {
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{
@@ -232,7 +234,35 @@ func (r *queryResolver) GetStudentsByRobboUnitID(ctx context.Context, robboUnitI
 	}
 	return &models.UsersList{
 		Users:     models.FromUsersCore(students),
-		CountRows: int(countRows),
+		CountRows: len(students),
+	}, nil
+}
+
+// GetStudentsByTeacherID is the resolver for the GetStudentsByTeacherId field.
+func (r *queryResolver) GetStudentsByTeacherID(ctx context.Context, teacherID string) (*models.UsersList, error) {
+	atoi, err := strconv.Atoi(teacherID)
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusBadRequest,
+					Message: consts.ErrAtoi,
+				},
+			},
+		}
+	}
+	students, err := r.userService.GetStudentsByTeacherId(uint(atoi))
+	if err != nil {
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
+	}
+	return &models.UsersList{
+		Users:     models.FromUsersCore(students),
+		CountRows: len(students),
 	}, nil
 }
 

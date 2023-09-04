@@ -70,8 +70,9 @@ type Mutation {
 type Query {
 	GetUserByAccessToken: UserHttp! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
 	GetUserById(id: ID!): UserHttp! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
-	GetAllUsers(page: Int, pageSize: Int, active: Boolean!, roles: [Role!]!): UsersList! @hasRole(roles: [SuperAdmin, UnitAdmin])
+	GetAllUsers(page: Int, pageSize: Int, active: Boolean!, roles: [Role!]!): UsersList! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher])
 	GetStudentsByRobboUnitId(robboUnitId: ID!): UsersList! @hasRole(roles: [SuperAdmin, UnitAdmin])
+	GetStudentsByTeacherId(teacherId: ID!): UsersList! @hasRole(roles: [SuperAdmin, UnitAdmin])
 }
 
 directive  @hasRole(roles: [Role]) on FIELD_DEFINITION

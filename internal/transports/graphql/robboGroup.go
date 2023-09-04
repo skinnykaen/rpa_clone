@@ -130,7 +130,9 @@ func (r *queryResolver) GetRobboGroupByID(ctx context.Context, id string) (*mode
 
 // GetAllRobboGroupByAccessToken is the resolver for the GetAllRobboGroupByAccessToken field.
 func (r *queryResolver) GetAllRobboGroupByAccessToken(ctx context.Context, page *int, pageSize *int) (*models.RobboGroupHTTPList, error) {
-	robboGroups, countRows, err := r.robboGroupService.GetAllRobboGroups(page, pageSize, ctx.Value(consts.KeyRole).(models.Role))
+	clientId := ctx.Value(consts.KeyId).(uint)
+	clientRole := ctx.Value(consts.KeyRole).(models.Role)
+	robboGroups, countRows, err := r.robboGroupService.GetAllRobboGroups(page, pageSize, clientId, clientRole)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{

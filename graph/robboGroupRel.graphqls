@@ -1,5 +1,5 @@
 extend type Query {
-	GetStudentsByRobboGroupId(page: Int, pageSize: Int, robboGroupId: ID!): UsersList! @hasRole(roles:[SuperAdmin, Parent])
+	GetStudentsByRobboGroupId(page: Int, pageSize: Int, robboGroupId: ID!): UsersList! @hasRole(roles:[SuperAdmin, UnitAdmin,Teacher])
 	GetTeachersByRobboGroupId(page: Int, pageSize: Int, robboGroupId: ID!): UsersList! @hasRole(roles:[SuperAdmin, UnitAdmin])
 	GetRobboGroupsByUserId(userId: ID!): RobboGroupHttpList! @hasRole(roles:[SuperAdmin, UnitAdmin])
 }

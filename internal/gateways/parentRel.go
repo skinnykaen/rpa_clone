@@ -106,7 +106,7 @@ func (p ParentRelGatewayImpl) GetChildrenByParentId(parentId uint) (students []m
 
 func (p ParentRelGatewayImpl) GetParentsByChildId(childId uint) (parents []models.UserCore, err error) {
 	var rels []models.ParentRelCore
-	if err := p.postgresClient.Db.Where(models.ParentRelCore{ParentID: childId}).Preload("Parent").Find(&rels).Error; err != nil {
+	if err := p.postgresClient.Db.Where(models.ParentRelCore{ChildID: childId}).Preload("Parent").Find(&rels).Error; err != nil {
 		return []models.UserCore{}, utils.ResponseError{
 			Code:    http.StatusInternalServerError,
 			Message: err.Error(),

@@ -15,10 +15,69 @@ type RobboUnitRelGateway interface {
 	GetRelById(id uint) (models.RobboUnitRelCore, error)
 	GetUnitAdminsByRobboUnitId(robboUnitId uint) (unitAdmins []models.UserCore, err error)
 	GetRobboUnitsByUnitAdmin(unitAdminId uint) (robboUnits []models.RobboUnitCore, err error)
+	GetStudentsByRobboUnitId(robboUnitId uint) (users []models.UserCore, err error)
+	GetTeachersByRobboUnitId(robboUnitId uint) (users []models.UserCore, err error)
 }
 
 type RobboUnitRelGatewayImpl struct {
 	postgresClient db.PostgresClient
+}
+
+func (u RobboUnitRelGatewayImpl) GetStudentsByRobboUnitId(robboUnitId uint) (students []models.UserCore, err error) {
+	if err := u.postgresClient.Db.Transaction(func(tx *gorm.DB) error {
+		var robboGroups []models.RobboGroupCore
+		if err := tx.Preload("RobboUnit").Where("robbo_unit_id = ?", robboUnitId).Find(&robboGroups).Error; err != nil {
+			return err
+		}
+		for _, robboGroup := range robboGroups {
+			var rels []models.RobboGroupRelCore
+			if err := tx.Preload("User").Where(models.RobboGroupRelCore{RobboGroupID: robboGroup.ID}).Find(&rels).Error; err != nil {
+				return err
+			}
+			for _, rel := range rels {
+				if rel.User.Role.String() == models.RoleStudent.String() {
+					students = append(students, rel.User)
+				}
+			}
+		}
+		return nil
+	}); err != nil {
+		return []models.UserCore{}, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
+	}
+	return students, nil
+}
+
+func (u RobboUnitRelGatewayImpl) GetTeachersByRobboUnitId(robboUnitId uint) (teachers []models.UserCore, err error) {
+	if err := u.postgresClient.Db.Transaction(func(tx *gorm.DB) error {
+		var robboGroups []models.RobboGroupCore
+		if err := tx.Preload("RobboUnit").Where("robbo_unit_id = ?", robboUnitId).Find(&robboGroups).Error; err != nil {
+			return err
+		}
+		userIdsMap := make(map[uint]bool)
+		for _, robboGroup := range robboGroups {
+			var rels []models.RobboGroupRelCore
+			if err := tx.Preload("User").Where(models.RobboGroupRelCore{RobboGroupID: robboGroup.ID}).Find(&rels).Error; err != nil {
+				return err
+			}
+			for i := 0; i < len(rels); i++ {
+				if rels[i].User.Role.String() == models.RoleTeacher.String() &&
+					!userIdsMap[rels[i].UserID] {
+					teachers = append(teachers, rels[i].User)
+				}
+				userIdsMap[rels[i].UserID] = true
+			}
+		}
+		return nil
+	}); err != nil {
+		return []models.UserCore{}, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
+	}
+	return teachers, nil
 }
 
 func (u RobboUnitRelGatewayImpl) CreateRel(rel models.RobboUnitRelCore) (models.RobboUnitRelCore, error) {

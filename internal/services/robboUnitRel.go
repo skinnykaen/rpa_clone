@@ -11,10 +11,20 @@ type RobboUnitRelService interface {
 	GetRelById(id uint) (models.RobboUnitRelCore, error)
 	GetUnitAdminsByRobboUnitId(robboUnitId uint) (unitAdmins []models.UserCore, err error)
 	GetRobboUnitsByUnitAdmin(unitAdminId uint) (robboUnits []models.RobboUnitCore, err error)
+	GetStudentsByRobboUnitId(robboUnitId uint) (students []models.UserCore, err error)
+}
+
+type robboGroupsByUnitAdminProvider interface {
+	GetRobboGroupsByRobboUnitById(offset, limit int, robboUnitId uint) (robboGroups []models.RobboGroupCore, countRows uint, err error)
 }
 
 type RobboUnitRelServiceImpl struct {
-	robboUnitRelGateway gateways.RobboUnitRelGateway
+	robboUnitRelGateway            gateways.RobboUnitRelGateway
+	robboGroupsByUnitAdminProvider robboGroupsByUnitAdminProvider
+}
+
+func (u RobboUnitRelServiceImpl) GetStudentsByRobboUnitId(robboUnitId uint) (students []models.UserCore, err error) {
+	return u.robboUnitRelGateway.GetStudentsByRobboUnitId(robboUnitId)
 }
 
 func (u RobboUnitRelServiceImpl) CreateRel(unitAdminId, robboUnitId uint) (models.RobboUnitRelCore, error) {

@@ -11,11 +11,12 @@ type RobboUnitService interface {
 	GetRobboUnitById(id uint) (robboUnit models.RobboUnitCore, err error)
 	DeleteRobboUnit(id uint) error
 	UpdateRobboUnit(robboUnit models.RobboUnitCore) (updated models.RobboUnitCore, err error)
-	GetAllRobboUnits(page, pageSize *int, clientRole models.Role) (robboUnits []models.RobboUnitCore, countRows uint, err error)
+	GetAllRobboUnits(page, pageSize *int, clientId uint, clientRole models.Role) (robboUnits []models.RobboUnitCore, countRows uint, err error)
 }
 
 type RobboUnitServiceImpl struct {
-	robboUnitGateway gateways.RobboUnitGateway
+	robboUnitGateway              gateways.RobboUnitGateway
+	robboUnitsByUnitAdminProvider robboUnitsByUnitAdminProvider
 }
 
 func (r RobboUnitServiceImpl) DeleteRobboUnit(id uint) error {
@@ -26,12 +27,18 @@ func (r RobboUnitServiceImpl) UpdateRobboUnit(robboUnit models.RobboUnitCore) (u
 	return r.robboUnitGateway.UpdateRobboUnit(robboUnit)
 }
 
-func (r RobboUnitServiceImpl) GetAllRobboUnits(page, pageSize *int, clientRole models.Role) (robboUnits []models.RobboUnitCore, countRows uint, err error) {
+func (r RobboUnitServiceImpl) GetAllRobboUnits(page, pageSize *int, clientId uint, clientRole models.Role) (robboUnits []models.RobboUnitCore, countRows uint, err error) {
 	offset, limit := utils.GetOffsetAndLimit(page, pageSize)
-	if clientRole.String() == models.RoleSuperAdmin.String() {
+	switch clientRole.String() {
+	case models.RoleSuperAdmin.String():
 		return r.robboUnitGateway.GetAllRobboUnits(offset, limit)
+	case models.RoleUnitAdmin.String():
+		robboUnits, err := r.robboUnitsByUnitAdminProvider.GetRobboUnitsByUnitAdmin(clientId)
+		if err != nil {
+			return []models.RobboUnitCore{}, 0, err
+		}
+		return robboUnits, uint(len(robboUnits)), nil
 	}
-	// TODO robbo units for unit admin
 	return
 }
 

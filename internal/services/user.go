@@ -13,18 +13,106 @@ type UserService interface {
 	DeleteUser(id uint) error
 	UpdateUser(user models.UserCore, clientRole models.Role) (updatedUser models.UserCore, err error)
 	GetUserById(id uint, clientRole models.Role) (models.UserCore, error)
-	GetAllUsers(page, pageSize *int, isActive bool, roles []models.Role, clientRole models.Role) (users []models.UserCore, countRows uint, err error)
+	GetAllUsers(page, pageSize *int, isActive bool, roles []models.Role, clientId uint, clientRole models.Role) (users []models.UserCore, countRows uint, err error)
 	GetUsersByEmail(page, pageSize *int, roles []models.Role, email string, clientRole models.Role) (users []models.UserCore, countRows uint, err error)
 	SetIsActive(id uint, isActive bool) error
-	GetStudentsByRobboUnitId(robboUnitId uint) (students []models.UserCore, countRows uint, err error)
+	GetStudentsByUnitAdminId(unitAdminId uint) (students []models.UserCore, err error)
+	GetTeachersByUnitAdminId(unitAdminId uint) (students []models.UserCore, err error)
+	GetClientsByUnitAdminId(unitAdminId uint) (clients []models.UserCore, err error)
+	GetStudentsByTeacherId(teacherId uint) (students []models.UserCore, err error)
+}
+
+type parentByChildIdProvider interface {
+	GetParentsByChildId(childId uint) (parents []models.UserCore, err error)
+}
+
+type robboGroupRelProvider interface {
+	GetStudentsByRobboGroupId(offset, limit int, robboGroupId uint) (students []models.UserCore, countRows int, err error)
+	GetRobboGroupsByUserId(userId uint) (robboGroups []models.RobboGroupCore, err error)
+}
+
+type robboUnitsByUnitAdminProvider interface {
+	GetRobboUnitsByUnitAdmin(unitAdminId uint) (robboUnits []models.RobboUnitCore, err error)
+}
+
+type usersByRobboUnitIdProvider interface {
+	GetStudentsByRobboUnitId(robboUnitId uint) (students []models.UserCore, err error)
+	GetTeachersByRobboUnitId(robboUnitId uint) (users []models.UserCore, err error)
 }
 
 type UserServiceImpl struct {
-	userGateway gateways.UserGateway
+	userGateway                   gateways.UserGateway
+	usersByRobboUnitIdProvider    usersByRobboUnitIdProvider
+	robboUnitsByUnitAdminProvider robboUnitsByUnitAdminProvider
+	parentByChildIdProvider       parentByChildIdProvider
+	robboGroupRelProvider         robboGroupRelProvider
 }
 
-func (u UserServiceImpl) GetStudentsByRobboUnitId(robboUnitId uint) (students []models.UserCore, countRows uint, err error) {
-	return u.userGateway.GetStudentsByRobboUnitId(0, 0, robboUnitId)
+func (u UserServiceImpl) GetStudentsByTeacherId(teacherId uint) (students []models.UserCore, err error) {
+	robboGroups, err := u.robboGroupRelProvider.GetRobboGroupsByUserId(teacherId)
+	if err != nil {
+		return []models.UserCore{}, err
+	}
+	for _, robboGroup := range robboGroups {
+		studentsByGroup, _, err := u.robboGroupRelProvider.GetStudentsByRobboGroupId(0, 100, robboGroup.ID)
+		if err != nil {
+			return []models.UserCore{}, err
+		}
+		students = append(students, studentsByGroup...)
+	}
+	return students, nil
+}
+
+func (u UserServiceImpl) GetClientsByUnitAdminId(unitAdminId uint) (clients []models.UserCore, err error) {
+	students, err := u.GetStudentsByUnitAdminId(unitAdminId)
+	if err != nil {
+		return []models.UserCore{}, err
+	}
+	userIdsMap := make(map[uint]bool)
+	for _, student := range students {
+		parentsByChildId, err := u.parentByChildIdProvider.GetParentsByChildId(student.ID)
+		if err != nil {
+			return []models.UserCore{}, err
+		}
+
+		for i := 0; i < len(parentsByChildId); i++ {
+			if !userIdsMap[parentsByChildId[i].ID] {
+				clients = append(clients, parentsByChildId[i])
+				userIdsMap[parentsByChildId[i].ID] = true
+			}
+		}
+	}
+	return clients, nil
+}
+
+func (u UserServiceImpl) GetStudentsByUnitAdminId(unitAdminId uint) (students []models.UserCore, err error) {
+	robboUnits, err := u.robboUnitsByUnitAdminProvider.GetRobboUnitsByUnitAdmin(unitAdminId)
+	if err != nil {
+		return []models.UserCore{}, err
+	}
+	for _, robboUnit := range robboUnits {
+		studentsByRobboUnit, err := u.usersByRobboUnitIdProvider.GetStudentsByRobboUnitId(robboUnit.ID)
+		if err != nil {
+			return []models.UserCore{}, err
+		}
+		students = append(students, studentsByRobboUnit...)
+	}
+	return students, nil
+}
+
+func (u UserServiceImpl) GetTeachersByUnitAdminId(unitAdminId uint) (students []models.UserCore, err error) {
+	robboUnits, err := u.robboUnitsByUnitAdminProvider.GetRobboUnitsByUnitAdmin(unitAdminId)
+	if err != nil {
+		return []models.UserCore{}, err
+	}
+	for _, robboUnit := range robboUnits {
+		studentsByRobboUnit, err := u.usersByRobboUnitIdProvider.GetTeachersByRobboUnitId(robboUnit.ID)
+		if err != nil {
+			return []models.UserCore{}, err
+		}
+		students = append(students, studentsByRobboUnit...)
+	}
+	return students, nil
 }
 
 func (u UserServiceImpl) GetUsersByEmail(page, pageSize *int, roles []models.Role, email string, clientRole models.Role) (users []models.UserCore, countRows uint, err error) {
@@ -141,7 +229,7 @@ func (u UserServiceImpl) GetUserById(id uint, clientRole models.Role) (models.Us
 	// checking the client role for the possibility of getting a user
 	switch clientRole {
 	case models.RoleParent:
-		if user.Role.String() != models.RoleStudent.String() {
+		if user.Role.String() != models.RoleStudent.String() && user.Role.String() != models.RoleParent.String() {
 			return models.UserCore{}, utils.ResponseError{
 				Code:    http.StatusForbidden,
 				Message: consts.ErrAccessDenied,
@@ -170,17 +258,57 @@ func (u UserServiceImpl) GetAllUsers(
 	page, pageSize *int,
 	isActive bool,
 	roles []models.Role,
+	clientId uint,
 	clientRole models.Role,
 ) (users []models.UserCore, countRows uint, err error) {
 	// checking the client role for the possibility of getting a users
-	switch clientRole {
-	case models.RoleUnitAdmin:
+	switch clientRole.String() {
+	case models.RoleUnitAdmin.String():
 		for _, role := range roles {
+			switch role.String() {
+			case models.RoleStudent.String():
+				students, err := u.GetStudentsByUnitAdminId(clientId)
+				if err != nil {
+					return []models.UserCore{}, 0, err
+				}
+				users = append(users, students...)
+
+			case models.RoleTeacher.String():
+				teachers, err := u.GetTeachersByUnitAdminId(clientId)
+				if err != nil {
+					return []models.UserCore{}, 0, err
+				}
+				users = append(users, teachers...)
+
+			case models.RoleParent.String():
+				clients, err := u.GetClientsByUnitAdminId(clientId)
+				if err != nil {
+					return []models.UserCore{}, 0, err
+				}
+				users = append(users, clients...)
+			}
+
 			if role.String() == models.RoleSuperAdmin.String() || role.String() == models.RoleUnitAdmin.String() {
 				return []models.UserCore{}, 0, utils.ResponseError{
 					Code:    http.StatusForbidden,
 					Message: consts.ErrAccessDenied,
 				}
+			}
+			return users, uint(len(users)), nil
+		}
+	case models.RoleTeacher.String():
+		for _, role := range roles {
+			if role.String() != models.RoleStudent.String() {
+				return []models.UserCore{}, 0, utils.ResponseError{
+					Code:    http.StatusForbidden,
+					Message: consts.ErrAccessDenied,
+				}
+			} else {
+				students, err := u.GetStudentsByTeacherId(clientId)
+				if err != nil {
+					return []models.UserCore{}, 0, err
+				}
+				return students, uint(len(students)), nil
 			}
 		}
 	}

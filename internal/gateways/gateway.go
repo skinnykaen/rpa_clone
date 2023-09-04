@@ -20,7 +20,9 @@ type Gateways struct {
 
 func SetupGateways(pc db.PostgresClient) Gateways {
 	return Gateways{
-		User:          UserGatewayImpl{postgresClient: pc},
+		User: UserGatewayImpl{
+			postgresClient: pc,
+		},
 		ParentRel:     ParentRelGatewayImpl{pc},
 		Project:       ProjectGatewayImpl{pc},
 		ProjectPage:   ProjectPageGatewayImpl{pc},

@@ -1,5 +1,5 @@
 extend type Query {
-	GetChildrenByParent(parentId: ID!): UsersList! @hasRole(roles:[SuperAdmin, Parent])
+	GetChildrenByParent(parentId: ID!): UsersList! @hasRole(roles:[SuperAdmin, UnitAdmin, Parent])
 	GetParentsByChild(childId: ID!): UsersList!
 }
 

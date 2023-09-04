@@ -32,11 +32,15 @@ func SetupServices(
 ) Services {
 	return Services{
 		UserService: &UserServiceImpl{
-			userGateway: userGateway,
+			userGateway:                   userGateway,
+			usersByRobboUnitIdProvider:    robboUnitRelGateway,
+			robboUnitsByUnitAdminProvider: robboUnitRelGateway,
+			parentByChildIdProvider:       parentRelGateway,
+			robboGroupRelProvider:         robboGroupRelGateway,
 		},
 		AuthService: &AuthServiceImpl{
-			userGateway:            userGateway,
-			getterActivationByLink: settingsGateway,
+			userGateway:              userGateway,
+			activationByLinkProvider: settingsGateway,
 		},
 		ProjectService: &ProjectServiceImpl{
 			projectGateway: projectGateway,
@@ -51,10 +55,13 @@ func SetupServices(
 			parentRelGateway: parentRelGateway,
 		},
 		RobboUnitService: &RobboUnitServiceImpl{
-			robboUnitGateway: robboUnitGateway,
+			robboUnitGateway:              robboUnitGateway,
+			robboUnitsByUnitAdminProvider: robboUnitRelGateway,
 		},
 		RobboGroupService: &RobboGroupServiceImpl{
-			robboGroupGateway: robboGroupGateway,
+			robboGroupGateway:             robboGroupGateway,
+			robboUnitsByUnitAdminProvider: robboUnitRelGateway,
+			robboGroupsByTeacherProvider:  robboGroupRelGateway,
 		},
 		RobboUnitRelService: &RobboUnitRelServiceImpl{
 			robboUnitRelGateway: robboUnitRelGateway,

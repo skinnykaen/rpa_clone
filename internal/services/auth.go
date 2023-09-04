@@ -30,18 +30,16 @@ type AuthService interface {
 }
 
 type AuthServiceImpl struct {
-	userGateway gateways.UserGateway
-	// вместо целого gateway
-	//settingsGateway gateways.SettingsGateway
-	getterActivationByLink GetterActivationByLink
+	userGateway              gateways.UserGateway
+	activationByLinkProvider activationByLinkProvider
 }
 
-type GetterActivationByLink interface {
+type activationByLinkProvider interface {
 	GetActivationByLink() (activationByCode bool, err error)
 }
 
 func (a AuthServiceImpl) ConfirmActivation(link string) (Tokens, error) {
-	activationByLink, err := a.getterActivationByLink.GetActivationByLink()
+	activationByLink, err := a.activationByLinkProvider.GetActivationByLink()
 	if err != nil {
 		return Tokens{Access: "", Refresh: ""}, utils.ResponseError{
 			Code:    http.StatusInternalServerError,
@@ -172,7 +170,7 @@ func (a AuthServiceImpl) SignUp(newUser models.UserCore) error {
 		}
 	}
 
-	activationByLink, err := a.getterActivationByLink.GetActivationByLink()
+	activationByLink, err := a.activationByLinkProvider.GetActivationByLink()
 	if err != nil {
 		return utils.ResponseError{
 			Code:    http.StatusInternalServerError,

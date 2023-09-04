@@ -22,38 +22,10 @@ type UserGateway interface {
 	GetAllUsers(offset, limit int, isActive bool, role []models.Role) (users []models.UserCore, countRows uint, err error)
 	DoesExistEmail(id uint, email string) (bool, error)
 	SetIsActive(id uint, isActive bool) error
-	GetStudentsByRobboUnitId(offset, limit int, robboUnitId uint) (students []models.UserCore, countRows uint, err error)
 }
 
 type UserGatewayImpl struct {
 	postgresClient db.PostgresClient
-}
-
-func (u UserGatewayImpl) GetStudentsByRobboUnitId(offset, limit int, robboUnitId uint) (students []models.UserCore, countRows uint, err error) {
-	if err := u.postgresClient.Db.Transaction(func(tx *gorm.DB) error {
-		var robboGroups []models.RobboGroupCore
-		if err := tx.Preload("RobboUnit").Where("robbo_unit_id = ?", robboUnitId).Find(&robboGroups).Error; err != nil {
-			return err
-		}
-		for _, robboGroup := range robboGroups {
-			var rels []models.RobboGroupRelCore
-			if err := tx.Preload("User").Where(models.RobboGroupRelCore{RobboGroupID: robboGroup.ID}).Find(&rels).Error; err != nil {
-				return err
-			}
-			for _, rel := range rels {
-				if rel.User.Role.String() == models.RoleStudent.String() {
-					students = append(students, rel.User)
-				}
-			}
-		}
-		return nil
-	}); err != nil {
-		return []models.UserCore{}, 0, utils.ResponseError{
-			Code:    http.StatusInternalServerError,
-			Message: err.Error(),
-		}
-	}
-	return students, uint(len(students)), nil
 }
 
 func (u UserGatewayImpl) GetUsersByEmail(offset, limit int, role []models.Role, email string) (users []models.UserCore, countRows uint, err error) {
@@ -180,6 +152,7 @@ func (u UserGatewayImpl) GetAllUsers(
 	role []models.Role,
 ) (users []models.UserCore, countRows uint, err error) {
 	var count int64
+
 	if len(role) == 0 {
 		role = append(role,
 			models.RoleStudent,
@@ -188,14 +161,23 @@ func (u UserGatewayImpl) GetAllUsers(
 			models.RoleUnitAdmin,
 		)
 	}
-	result := u.postgresClient.Db.Limit(limit).Offset(offset).
-		Where("is_active = ? AND (role) IN ?", isActive, role).Find(&users)
-	if result.Error != nil {
+
+	if err := u.postgresClient.Db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Limit(limit).Offset(offset).
+			Where("is_active = ? AND (role) IN ?", isActive, role).Find(&users).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&models.UserCore{}).
+			Where("is_active = ? AND (role) IN ?", isActive, role).Count(&count).Error; err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
 		return []models.UserCore{}, 0, utils.ResponseError{
 			Code:    http.StatusInternalServerError,
-			Message: result.Error.Error(),
+			Message: err.Error(),
 		}
 	}
-	result.Count(&count)
-	return users, uint(count), result.Error
+
+	return users, uint(count), nil
 }
