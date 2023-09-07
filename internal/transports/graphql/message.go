@@ -8,6 +8,7 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/skinnykaen/rpa_clone/graph"
 	"github.com/skinnykaen/rpa_clone/internal/consts"
@@ -68,6 +69,18 @@ func (r *mutationResolver) PostMessage(ctx context.Context, input models.NewMess
 
 	var messageHttp models.MessageHTTP
 	messageHttp.FromCore(message)
+
+	if err := r.messageObservers.NotifyObserver(message.ReceiverID, models.MessageModeCreate, messageHttp); err != nil {
+		if err.Error() != consts.ErrThereIsNoObservers {
+			r.loggers.Err.Printf("%s", err.Error())
+			return nil, &gqlerror.Error{
+				Extensions: map[string]interface{}{
+					"err": err,
+				},
+			}
+		}
+	}
+
 	return &messageHttp, nil
 }
 
@@ -100,6 +113,18 @@ func (r *mutationResolver) UpdateMessage(ctx context.Context, id string, payload
 
 	var messageHttp models.MessageHTTP
 	messageHttp.FromCore(message)
+
+	if err := r.messageObservers.NotifyObserver(message.ReceiverID, models.MessageModeUpdate, messageHttp); err != nil {
+		if err.Error() != consts.ErrThereIsNoObservers {
+			r.loggers.Err.Printf("%s", err.Error())
+			return nil, &gqlerror.Error{
+				Extensions: map[string]interface{}{
+					"err": err,
+				},
+			}
+		}
+	}
+
 	return &messageHttp, nil
 }
 
@@ -119,12 +144,33 @@ func (r *mutationResolver) DeleteMessage(ctx context.Context, id string) (*model
 		}
 	}
 
-	if err := r.messageService.DeleteMessage(uint(mesID), ctx.Value(consts.KeyId).(uint)); err != nil {
+	receiverID, err := r.messageService.DeleteMessage(uint(mesID), ctx.Value(consts.KeyId).(uint))
+
+	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{
 				"err": err,
 			},
+		}
+	}
+
+	if err := r.messageObservers.NotifyObserver(receiverID, models.MessageModeDelete,
+		models.MessageHTTP{
+			ID:       id,
+			Payload:  "",
+			ChatID:   "0",
+			SentAt:   time.Time{},
+			Sender:   &models.UserHTTP{ID: strconv.Itoa(int(ctx.Value(consts.KeyId).(uint)))},
+			Receiver: &models.UserHTTP{ID: strconv.Itoa(int(receiverID))},
+		}); err != nil {
+		if err.Error() != consts.ErrThereIsNoObservers {
+			r.loggers.Err.Printf("%s", err.Error())
+			return nil, &gqlerror.Error{
+				Extensions: map[string]interface{}{
+					"err": err,
+				},
+			}
 		}
 	}
 
@@ -186,6 +232,29 @@ func (r *queryResolver) MessagesFromUser(ctx context.Context, input models.Messa
 		From:     from,
 		To:       to,
 	}, nil
+}
+
+// MessageSubscription is the resolver for the MessageSubscription field.
+func (r *subscriptionResolver) MessageSubscription(ctx context.Context, mode *models.MessageMode) (<-chan *models.MessageForSubscription, error) {
+	userID := ctx.Value(consts.KeyId).(uint)
+
+	channel, err := r.messageObservers.CreateObserver(userID, mode)
+
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
+	}
+
+	go func() {
+		<-ctx.Done()
+		_ = r.messageObservers.DeleteObserver(userID)
+	}()
+
+	return channel, nil
 }
 
 // MessageConnection returns graph.MessageConnectionResolver implementation.

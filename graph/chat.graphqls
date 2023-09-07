@@ -9,10 +9,14 @@ type ChatsList{
     countRows: Int!
 }
 
-type ChatMutationResult{
-    id: ID!
-    user1Id: ID!
-    user2Id: ID!
+enum ChatMode{
+    Create
+    Delete
+}
+
+type ChatForSubscription{
+    chatHttp:ChatHttp!
+    chatMode:ChatMode!
 }
 
 extend type Query {
@@ -20,11 +24,11 @@ extend type Query {
 }
 
 extend type Mutation {
-    CreateChat(userId:ID!): ChatMutationResult! @hasRole(roles: [SuperAdmin, Student])
+    CreateChat(userId:ID!): ChatHttp! @hasRole(roles: [SuperAdmin, Student])
 
     DeleteChat(chatId:ID!):Response! @hasRole(roles: [SuperAdmin, Student])
 }
 
 type Subscription {
-    UserJoined(userId: ID!, chatId:ID!):MessageHttp! @hasRole(roles: [SuperAdmin, Student])
+    ChatSubscription(mode:ChatMode):ChatForSubscription! @hasRole(roles: [SuperAdmin, Student])
 }

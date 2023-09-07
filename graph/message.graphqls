@@ -38,6 +38,17 @@ input NewMessage{
     receiverId: ID!
 }
 
+enum MessageMode{
+    Create
+    Delete
+    Update
+}
+
+type MessageForSubscription{
+    messageHttp:MessageHttp!
+    messageMode:MessageMode!
+}
+
 extend type Query {
     MessagesFromUser(input:MessagesFromUserInput!, count: Int, cursor:ID):MessageConnection! @hasRole(roles: [SuperAdmin, Student])
 }
@@ -48,5 +59,7 @@ extend type Mutation {
     DeleteMessage(id:ID!):Response! @hasRole(roles: [SuperAdmin, Student])
 }
 
-
+extend type Subscription {
+    MessageSubscription(mode:MessageMode):MessageForSubscription! @hasRole(roles: [SuperAdmin, Student])
+}
 

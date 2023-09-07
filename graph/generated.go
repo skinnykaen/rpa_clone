@@ -56,16 +56,15 @@ type ComplexityRoot struct {
 		URIAbsolute func(childComplexity int) int
 	}
 
+	ChatForSubscription struct {
+		ChatHTTP func(childComplexity int) int
+		ChatMode func(childComplexity int) int
+	}
+
 	ChatHttp struct {
 		ID    func(childComplexity int) int
 		User1 func(childComplexity int) int
 		User2 func(childComplexity int) int
-	}
-
-	ChatMutationResult struct {
-		ID      func(childComplexity int) int
-		User1Id func(childComplexity int) int
-		User2Id func(childComplexity int) int
 	}
 
 	ChatsList struct {
@@ -130,6 +129,11 @@ type ComplexityRoot struct {
 	MessageEdge struct {
 		Cursor func(childComplexity int) int
 		Node   func(childComplexity int) int
+	}
+
+	MessageForSubscription struct {
+		MessageHTTP func(childComplexity int) int
+		MessageMode func(childComplexity int) int
 	}
 
 	MessageHttp struct {
@@ -231,7 +235,8 @@ type ComplexityRoot struct {
 	}
 
 	Subscription struct {
-		UserJoined func(childComplexity int, userID string, chatID string) int
+		ChatSubscription    func(childComplexity int, mode *models.ChatMode) int
+		MessageSubscription func(childComplexity int, mode *models.MessageMode) int
 	}
 
 	UserHttp struct {
@@ -267,7 +272,7 @@ type MutationResolver interface {
 	SignIn(ctx context.Context, input models.SignIn) (*models.SignInResponse, error)
 	RefreshToken(ctx context.Context, refreshToken string) (*models.SignInResponse, error)
 	ConfirmActivation(ctx context.Context, activationLink string) (*models.SignInResponse, error)
-	CreateChat(ctx context.Context, userID string) (*models.ChatMutationResult, error)
+	CreateChat(ctx context.Context, userID string) (*models.ChatHTTP, error)
 	DeleteChat(ctx context.Context, chatID string) (*models.Response, error)
 	PostMessage(ctx context.Context, input models.NewMessage) (*models.MessageHTTP, error)
 	UpdateMessage(ctx context.Context, id string, payload string) (*models.MessageHTTP, error)
@@ -297,7 +302,8 @@ type QueryResolver interface {
 	GetSettings(ctx context.Context) (*models.Settings, error)
 }
 type SubscriptionResolver interface {
-	UserJoined(ctx context.Context, userID string, chatID string) (<-chan *models.MessageHTTP, error)
+	ChatSubscription(ctx context.Context, mode *models.ChatMode) (<-chan *models.ChatForSubscription, error)
+	MessageSubscription(ctx context.Context, mode *models.MessageMode) (<-chan *models.MessageForSubscription, error)
 }
 
 type executableSchema struct {
@@ -336,6 +342,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.AbsoluteMediaHttp.URIAbsolute(childComplexity), true
 
+	case "ChatForSubscription.chatHttp":
+		if e.complexity.ChatForSubscription.ChatHTTP == nil {
+			break
+		}
+
+		return e.complexity.ChatForSubscription.ChatHTTP(childComplexity), true
+
+	case "ChatForSubscription.chatMode":
+		if e.complexity.ChatForSubscription.ChatMode == nil {
+			break
+		}
+
+		return e.complexity.ChatForSubscription.ChatMode(childComplexity), true
+
 	case "ChatHttp.id":
 		if e.complexity.ChatHttp.ID == nil {
 			break
@@ -356,27 +376,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.ChatHttp.User2(childComplexity), true
-
-	case "ChatMutationResult.id":
-		if e.complexity.ChatMutationResult.ID == nil {
-			break
-		}
-
-		return e.complexity.ChatMutationResult.ID(childComplexity), true
-
-	case "ChatMutationResult.user1Id":
-		if e.complexity.ChatMutationResult.User1Id == nil {
-			break
-		}
-
-		return e.complexity.ChatMutationResult.User1Id(childComplexity), true
-
-	case "ChatMutationResult.user2Id":
-		if e.complexity.ChatMutationResult.User2Id == nil {
-			break
-		}
-
-		return e.complexity.ChatMutationResult.User2Id(childComplexity), true
 
 	case "ChatsList.chats":
 		if e.complexity.ChatsList.Chats == nil {
@@ -657,6 +656,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.MessageEdge.Node(childComplexity), true
+
+	case "MessageForSubscription.messageHttp":
+		if e.complexity.MessageForSubscription.MessageHTTP == nil {
+			break
+		}
+
+		return e.complexity.MessageForSubscription.MessageHTTP(childComplexity), true
+
+	case "MessageForSubscription.messageMode":
+		if e.complexity.MessageForSubscription.MessageMode == nil {
+			break
+		}
+
+		return e.complexity.MessageForSubscription.MessageMode(childComplexity), true
 
 	case "MessageHttp.chatId":
 		if e.complexity.MessageHttp.ChatID == nil {
@@ -1279,17 +1292,29 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.SignInResponse.RefreshToken(childComplexity), true
 
-	case "Subscription.UserJoined":
-		if e.complexity.Subscription.UserJoined == nil {
+	case "Subscription.ChatSubscription":
+		if e.complexity.Subscription.ChatSubscription == nil {
 			break
 		}
 
-		args, err := ec.field_Subscription_UserJoined_args(context.TODO(), rawArgs)
+		args, err := ec.field_Subscription_ChatSubscription_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Subscription.UserJoined(childComplexity, args["userId"].(string), args["chatId"].(string)), true
+		return e.complexity.Subscription.ChatSubscription(childComplexity, args["mode"].(*models.ChatMode)), true
+
+	case "Subscription.MessageSubscription":
+		if e.complexity.Subscription.MessageSubscription == nil {
+			break
+		}
+
+		args, err := ec.field_Subscription_MessageSubscription_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Subscription.MessageSubscription(childComplexity, args["mode"].(*models.MessageMode)), true
 
 	case "UserHttp.activationLink":
 		if e.complexity.UserHttp.ActivationLink == nil {
@@ -2135,27 +2160,33 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 	return args, nil
 }
 
-func (ec *executionContext) field_Subscription_UserJoined_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Subscription_ChatSubscription_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 string
-	if tmp, ok := rawArgs["userId"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
-		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+	var arg0 *models.ChatMode
+	if tmp, ok := rawArgs["mode"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("mode"))
+		arg0, err = ec.unmarshalOChatMode2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐChatMode(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["userId"] = arg0
-	var arg1 string
-	if tmp, ok := rawArgs["chatId"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("chatId"))
-		arg1, err = ec.unmarshalNID2string(ctx, tmp)
+	args["mode"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Subscription_MessageSubscription_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *models.MessageMode
+	if tmp, ok := rawArgs["mode"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("mode"))
+		arg0, err = ec.unmarshalOMessageMode2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐMessageMode(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["chatId"] = arg1
+	args["mode"] = arg0
 	return args, nil
 }
 
@@ -2324,6 +2355,102 @@ func (ec *executionContext) fieldContext_AbsoluteMediaHttp_uri_absolute(ctx cont
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ChatForSubscription_chatHttp(ctx context.Context, field graphql.CollectedField, obj *models.ChatForSubscription) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ChatForSubscription_chatHttp(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ChatHTTP, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.ChatHTTP)
+	fc.Result = res
+	return ec.marshalNChatHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐChatHTTP(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ChatForSubscription_chatHttp(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ChatForSubscription",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_ChatHttp_id(ctx, field)
+			case "user1":
+				return ec.fieldContext_ChatHttp_user1(ctx, field)
+			case "user2":
+				return ec.fieldContext_ChatHttp_user2(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ChatHttp", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ChatForSubscription_chatMode(ctx context.Context, field graphql.CollectedField, obj *models.ChatForSubscription) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ChatForSubscription_chatMode(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ChatMode, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(models.ChatMode)
+	fc.Result = res
+	return ec.marshalNChatMode2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐChatMode(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ChatForSubscription_chatMode(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ChatForSubscription",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ChatMode does not have child fields")
 		},
 	}
 	return fc, nil
@@ -2508,138 +2635,6 @@ func (ec *executionContext) fieldContext_ChatHttp_user2(ctx context.Context, fie
 				return ec.fieldContext_UserHttp_activationLink(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UserHttp", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ChatMutationResult_id(ctx context.Context, field graphql.CollectedField, obj *models.ChatMutationResult) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ChatMutationResult_id(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ID, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNID2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_ChatMutationResult_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ChatMutationResult",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ID does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ChatMutationResult_user1Id(ctx context.Context, field graphql.CollectedField, obj *models.ChatMutationResult) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ChatMutationResult_user1Id(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.User1Id, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNID2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_ChatMutationResult_user1Id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ChatMutationResult",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ID does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ChatMutationResult_user2Id(ctx context.Context, field graphql.CollectedField, obj *models.ChatMutationResult) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ChatMutationResult_user2Id(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.User2Id, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNID2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_ChatMutationResult_user2Id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ChatMutationResult",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ID does not have child fields")
 		},
 	}
 	return fc, nil
@@ -4503,6 +4498,110 @@ func (ec *executionContext) fieldContext_MessageEdge_cursor(ctx context.Context,
 	return fc, nil
 }
 
+func (ec *executionContext) _MessageForSubscription_messageHttp(ctx context.Context, field graphql.CollectedField, obj *models.MessageForSubscription) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_MessageForSubscription_messageHttp(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MessageHTTP, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.MessageHTTP)
+	fc.Result = res
+	return ec.marshalNMessageHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐMessageHTTP(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_MessageForSubscription_messageHttp(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MessageForSubscription",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_MessageHttp_id(ctx, field)
+			case "payload":
+				return ec.fieldContext_MessageHttp_payload(ctx, field)
+			case "receiver":
+				return ec.fieldContext_MessageHttp_receiver(ctx, field)
+			case "sender":
+				return ec.fieldContext_MessageHttp_sender(ctx, field)
+			case "chatId":
+				return ec.fieldContext_MessageHttp_chatId(ctx, field)
+			case "sentAt":
+				return ec.fieldContext_MessageHttp_sentAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_MessageHttp_updatedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type MessageHttp", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MessageForSubscription_messageMode(ctx context.Context, field graphql.CollectedField, obj *models.MessageForSubscription) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_MessageForSubscription_messageMode(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MessageMode, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(models.MessageMode)
+	fc.Result = res
+	return ec.marshalNMessageMode2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐMessageMode(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_MessageForSubscription_messageMode(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MessageForSubscription",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type MessageMode does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _MessageHttp_id(ctx context.Context, field graphql.CollectedField, obj *models.MessageHTTP) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_MessageHttp_id(ctx, field)
 	if err != nil {
@@ -5513,10 +5612,10 @@ func (ec *executionContext) _Mutation_CreateChat(ctx context.Context, field grap
 		if tmp == nil {
 			return nil, nil
 		}
-		if data, ok := tmp.(*models.ChatMutationResult); ok {
+		if data, ok := tmp.(*models.ChatHTTP); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/skinnykaen/rpa_clone/internal/models.ChatMutationResult`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/skinnykaen/rpa_clone/internal/models.ChatHTTP`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5528,9 +5627,9 @@ func (ec *executionContext) _Mutation_CreateChat(ctx context.Context, field grap
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*models.ChatMutationResult)
+	res := resTmp.(*models.ChatHTTP)
 	fc.Result = res
-	return ec.marshalNChatMutationResult2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐChatMutationResult(ctx, field.Selections, res)
+	return ec.marshalNChatHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐChatHTTP(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Mutation_CreateChat(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -5542,13 +5641,13 @@ func (ec *executionContext) fieldContext_Mutation_CreateChat(ctx context.Context
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
-				return ec.fieldContext_ChatMutationResult_id(ctx, field)
-			case "user1Id":
-				return ec.fieldContext_ChatMutationResult_user1Id(ctx, field)
-			case "user2Id":
-				return ec.fieldContext_ChatMutationResult_user2Id(ctx, field)
+				return ec.fieldContext_ChatHttp_id(ctx, field)
+			case "user1":
+				return ec.fieldContext_ChatHttp_user1(ctx, field)
+			case "user2":
+				return ec.fieldContext_ChatHttp_user2(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type ChatMutationResult", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type ChatHttp", field.Name)
 		},
 	}
 	defer func() {
@@ -9020,8 +9119,8 @@ func (ec *executionContext) fieldContext_SignInResponse_refreshToken(ctx context
 	return fc, nil
 }
 
-func (ec *executionContext) _Subscription_UserJoined(ctx context.Context, field graphql.CollectedField) (ret func(ctx context.Context) graphql.Marshaler) {
-	fc, err := ec.fieldContext_Subscription_UserJoined(ctx, field)
+func (ec *executionContext) _Subscription_ChatSubscription(ctx context.Context, field graphql.CollectedField) (ret func(ctx context.Context) graphql.Marshaler) {
+	fc, err := ec.fieldContext_Subscription_ChatSubscription(ctx, field)
 	if err != nil {
 		return nil
 	}
@@ -9035,7 +9134,7 @@ func (ec *executionContext) _Subscription_UserJoined(ctx context.Context, field 
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Subscription().UserJoined(rctx, fc.Args["userId"].(string), fc.Args["chatId"].(string))
+			return ec.resolvers.Subscription().ChatSubscription(rctx, fc.Args["mode"].(*models.ChatMode))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "Student"})
@@ -9055,10 +9154,10 @@ func (ec *executionContext) _Subscription_UserJoined(ctx context.Context, field 
 		if tmp == nil {
 			return nil, nil
 		}
-		if data, ok := tmp.(<-chan *models.MessageHTTP); ok {
+		if data, ok := tmp.(<-chan *models.ChatForSubscription); ok {
 			return data, nil
 		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be <-chan *github.com/skinnykaen/rpa_clone/internal/models.MessageHTTP`, tmp)
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be <-chan *github.com/skinnykaen/rpa_clone/internal/models.ChatForSubscription`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -9072,7 +9171,7 @@ func (ec *executionContext) _Subscription_UserJoined(ctx context.Context, field 
 	}
 	return func(ctx context.Context) graphql.Marshaler {
 		select {
-		case res, ok := <-resTmp.(<-chan *models.MessageHTTP):
+		case res, ok := <-resTmp.(<-chan *models.ChatForSubscription):
 			if !ok {
 				return nil
 			}
@@ -9080,7 +9179,7 @@ func (ec *executionContext) _Subscription_UserJoined(ctx context.Context, field 
 				w.Write([]byte{'{'})
 				graphql.MarshalString(field.Alias).MarshalGQL(w)
 				w.Write([]byte{':'})
-				ec.marshalNMessageHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐMessageHTTP(ctx, field.Selections, res).MarshalGQL(w)
+				ec.marshalNChatForSubscription2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐChatForSubscription(ctx, field.Selections, res).MarshalGQL(w)
 				w.Write([]byte{'}'})
 			})
 		case <-ctx.Done():
@@ -9089,7 +9188,7 @@ func (ec *executionContext) _Subscription_UserJoined(ctx context.Context, field 
 	}
 }
 
-func (ec *executionContext) fieldContext_Subscription_UserJoined(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Subscription_ChatSubscription(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Subscription",
 		Field:      field,
@@ -9097,22 +9196,12 @@ func (ec *executionContext) fieldContext_Subscription_UserJoined(ctx context.Con
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_MessageHttp_id(ctx, field)
-			case "payload":
-				return ec.fieldContext_MessageHttp_payload(ctx, field)
-			case "receiver":
-				return ec.fieldContext_MessageHttp_receiver(ctx, field)
-			case "sender":
-				return ec.fieldContext_MessageHttp_sender(ctx, field)
-			case "chatId":
-				return ec.fieldContext_MessageHttp_chatId(ctx, field)
-			case "sentAt":
-				return ec.fieldContext_MessageHttp_sentAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_MessageHttp_updatedAt(ctx, field)
+			case "chatHttp":
+				return ec.fieldContext_ChatForSubscription_chatHttp(ctx, field)
+			case "chatMode":
+				return ec.fieldContext_ChatForSubscription_chatMode(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type MessageHttp", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type ChatForSubscription", field.Name)
 		},
 	}
 	defer func() {
@@ -9122,7 +9211,106 @@ func (ec *executionContext) fieldContext_Subscription_UserJoined(ctx context.Con
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Subscription_UserJoined_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Subscription_ChatSubscription_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Subscription_MessageSubscription(ctx context.Context, field graphql.CollectedField) (ret func(ctx context.Context) graphql.Marshaler) {
+	fc, err := ec.fieldContext_Subscription_MessageSubscription(ctx, field)
+	if err != nil {
+		return nil
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = nil
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Subscription().MessageSubscription(rctx, fc.Args["mode"].(*models.MessageMode))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "Student"})
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.HasRole == nil {
+				return nil, errors.New("directive hasRole is not implemented")
+			}
+			return ec.directives.HasRole(ctx, nil, directive0, roles)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(<-chan *models.MessageForSubscription); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be <-chan *github.com/skinnykaen/rpa_clone/internal/models.MessageForSubscription`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return nil
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return nil
+	}
+	return func(ctx context.Context) graphql.Marshaler {
+		select {
+		case res, ok := <-resTmp.(<-chan *models.MessageForSubscription):
+			if !ok {
+				return nil
+			}
+			return graphql.WriterFunc(func(w io.Writer) {
+				w.Write([]byte{'{'})
+				graphql.MarshalString(field.Alias).MarshalGQL(w)
+				w.Write([]byte{':'})
+				ec.marshalNMessageForSubscription2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐMessageForSubscription(ctx, field.Selections, res).MarshalGQL(w)
+				w.Write([]byte{'}'})
+			})
+		case <-ctx.Done():
+			return nil
+		}
+	}
+}
+
+func (ec *executionContext) fieldContext_Subscription_MessageSubscription(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Subscription",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "messageHttp":
+				return ec.fieldContext_MessageForSubscription_messageHttp(ctx, field)
+			case "messageMode":
+				return ec.fieldContext_MessageForSubscription_messageMode(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type MessageForSubscription", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Subscription_MessageSubscription_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -12011,29 +12199,24 @@ func (ec *executionContext) _AbsoluteMediaHttp(ctx context.Context, sel ast.Sele
 	return out
 }
 
-var chatHttpImplementors = []string{"ChatHttp"}
+var chatForSubscriptionImplementors = []string{"ChatForSubscription"}
 
-func (ec *executionContext) _ChatHttp(ctx context.Context, sel ast.SelectionSet, obj *models.ChatHTTP) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, chatHttpImplementors)
+func (ec *executionContext) _ChatForSubscription(ctx context.Context, sel ast.SelectionSet, obj *models.ChatForSubscription) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, chatForSubscriptionImplementors)
 
 	out := graphql.NewFieldSet(fields)
 	deferred := make(map[string]*graphql.FieldSet)
 	for i, field := range fields {
 		switch field.Name {
 		case "__typename":
-			out.Values[i] = graphql.MarshalString("ChatHttp")
-		case "id":
-			out.Values[i] = ec._ChatHttp_id(ctx, field, obj)
+			out.Values[i] = graphql.MarshalString("ChatForSubscription")
+		case "chatHttp":
+			out.Values[i] = ec._ChatForSubscription_chatHttp(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "user1":
-			out.Values[i] = ec._ChatHttp_user1(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "user2":
-			out.Values[i] = ec._ChatHttp_user2(ctx, field, obj)
+		case "chatMode":
+			out.Values[i] = ec._ChatForSubscription_chatMode(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -12060,29 +12243,29 @@ func (ec *executionContext) _ChatHttp(ctx context.Context, sel ast.SelectionSet,
 	return out
 }
 
-var chatMutationResultImplementors = []string{"ChatMutationResult"}
+var chatHttpImplementors = []string{"ChatHttp"}
 
-func (ec *executionContext) _ChatMutationResult(ctx context.Context, sel ast.SelectionSet, obj *models.ChatMutationResult) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, chatMutationResultImplementors)
+func (ec *executionContext) _ChatHttp(ctx context.Context, sel ast.SelectionSet, obj *models.ChatHTTP) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, chatHttpImplementors)
 
 	out := graphql.NewFieldSet(fields)
 	deferred := make(map[string]*graphql.FieldSet)
 	for i, field := range fields {
 		switch field.Name {
 		case "__typename":
-			out.Values[i] = graphql.MarshalString("ChatMutationResult")
+			out.Values[i] = graphql.MarshalString("ChatHttp")
 		case "id":
-			out.Values[i] = ec._ChatMutationResult_id(ctx, field, obj)
+			out.Values[i] = ec._ChatHttp_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "user1Id":
-			out.Values[i] = ec._ChatMutationResult_user1Id(ctx, field, obj)
+		case "user1":
+			out.Values[i] = ec._ChatHttp_user1(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "user2Id":
-			out.Values[i] = ec._ChatMutationResult_user2Id(ctx, field, obj)
+		case "user2":
+			out.Values[i] = ec._ChatHttp_user2(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -12562,6 +12745,50 @@ func (ec *executionContext) _MessageEdge(ctx context.Context, sel ast.SelectionS
 			out.Values[i] = ec._MessageEdge_node(ctx, field, obj)
 		case "cursor":
 			out.Values[i] = ec._MessageEdge_cursor(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var messageForSubscriptionImplementors = []string{"MessageForSubscription"}
+
+func (ec *executionContext) _MessageForSubscription(ctx context.Context, sel ast.SelectionSet, obj *models.MessageForSubscription) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, messageForSubscriptionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("MessageForSubscription")
+		case "messageHttp":
+			out.Values[i] = ec._MessageForSubscription_messageHttp(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "messageMode":
+			out.Values[i] = ec._MessageForSubscription_messageMode(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -13580,8 +13807,10 @@ func (ec *executionContext) _Subscription(ctx context.Context, sel ast.Selection
 	}
 
 	switch fields[0].Name {
-	case "UserJoined":
-		return ec._Subscription_UserJoined(ctx, fields[0])
+	case "ChatSubscription":
+		return ec._Subscription_ChatSubscription(ctx, fields[0])
+	case "MessageSubscription":
+		return ec._Subscription_MessageSubscription(ctx, fields[0])
 	default:
 		panic("unknown field " + strconv.Quote(fields[0].Name))
 	}
@@ -14066,6 +14295,24 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
+func (ec *executionContext) marshalNChatForSubscription2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐChatForSubscription(ctx context.Context, sel ast.SelectionSet, v models.ChatForSubscription) graphql.Marshaler {
+	return ec._ChatForSubscription(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNChatForSubscription2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐChatForSubscription(ctx context.Context, sel ast.SelectionSet, v *models.ChatForSubscription) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ChatForSubscription(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNChatHttp2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐChatHTTP(ctx context.Context, sel ast.SelectionSet, v models.ChatHTTP) graphql.Marshaler {
+	return ec._ChatHttp(ctx, sel, &v)
+}
+
 func (ec *executionContext) marshalNChatHttp2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐChatHTTPᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.ChatHTTP) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -14120,18 +14367,14 @@ func (ec *executionContext) marshalNChatHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_
 	return ec._ChatHttp(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNChatMutationResult2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐChatMutationResult(ctx context.Context, sel ast.SelectionSet, v models.ChatMutationResult) graphql.Marshaler {
-	return ec._ChatMutationResult(ctx, sel, &v)
+func (ec *executionContext) unmarshalNChatMode2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐChatMode(ctx context.Context, v interface{}) (models.ChatMode, error) {
+	var res models.ChatMode
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNChatMutationResult2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐChatMutationResult(ctx context.Context, sel ast.SelectionSet, v *models.ChatMutationResult) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._ChatMutationResult(ctx, sel, v)
+func (ec *executionContext) marshalNChatMode2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐChatMode(ctx context.Context, sel ast.SelectionSet, v models.ChatMode) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) marshalNChatsList2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐChatsList(ctx context.Context, sel ast.SelectionSet, v models.ChatsList) graphql.Marshaler {
@@ -14274,6 +14517,20 @@ func (ec *executionContext) marshalNMessageConnection2ᚖgithubᚗcomᚋskinnyka
 	return ec._MessageConnection(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNMessageForSubscription2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐMessageForSubscription(ctx context.Context, sel ast.SelectionSet, v models.MessageForSubscription) graphql.Marshaler {
+	return ec._MessageForSubscription(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNMessageForSubscription2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐMessageForSubscription(ctx context.Context, sel ast.SelectionSet, v *models.MessageForSubscription) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._MessageForSubscription(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNMessageHttp2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐMessageHTTP(ctx context.Context, sel ast.SelectionSet, v models.MessageHTTP) graphql.Marshaler {
 	return ec._MessageHttp(ctx, sel, &v)
 }
@@ -14286,6 +14543,16 @@ func (ec *executionContext) marshalNMessageHttp2ᚖgithubᚗcomᚋskinnykaenᚋr
 		return graphql.Null
 	}
 	return ec._MessageHttp(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNMessageMode2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐMessageMode(ctx context.Context, v interface{}) (models.MessageMode, error) {
+	var res models.MessageMode
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNMessageMode2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐMessageMode(ctx context.Context, sel ast.SelectionSet, v models.MessageMode) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) unmarshalNMessagesFromUserInput2githubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐMessagesFromUserInput(ctx context.Context, v interface{}) (models.MessagesFromUserInput, error) {
@@ -14915,6 +15182,22 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	return res
 }
 
+func (ec *executionContext) unmarshalOChatMode2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐChatMode(ctx context.Context, v interface{}) (*models.ChatMode, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(models.ChatMode)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOChatMode2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐChatMode(ctx context.Context, sel ast.SelectionSet, v *models.ChatMode) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
+}
+
 func (ec *executionContext) unmarshalOID2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
 	if v == nil {
 		return nil, nil
@@ -15024,6 +15307,22 @@ func (ec *executionContext) marshalOMessageHttp2ᚖgithubᚗcomᚋskinnykaenᚋr
 		return graphql.Null
 	}
 	return ec._MessageHttp(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOMessageMode2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐMessageMode(ctx context.Context, v interface{}) (*models.MessageMode, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(models.MessageMode)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOMessageMode2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐMessageMode(ctx context.Context, sel ast.SelectionSet, v *models.MessageMode) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
 }
 
 func (ec *executionContext) unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx context.Context, v interface{}) ([]*models.Role, error) {

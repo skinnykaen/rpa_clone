@@ -3,6 +3,7 @@ package resolvers
 import (
 	"github.com/skinnykaen/rpa_clone/internal/services"
 	"github.com/skinnykaen/rpa_clone/pkg/logger"
+	"sync"
 )
 
 type Resolver struct {
@@ -13,6 +14,9 @@ type Resolver struct {
 	settingsService    services.SettingsService
 	chatService        services.ChatService
 	messageService     services.MessageService
+
+	chatObservers    ChatObservers
+	messageObservers MessageObservers
 }
 
 func SetupResolvers(
@@ -23,6 +27,7 @@ func SetupResolvers(
 	settingsService services.SettingsService,
 	chatService services.ChatService,
 	messageService services.MessageService,
+
 ) Resolver {
 	return Resolver{
 		loggers:            loggers,
@@ -32,5 +37,7 @@ func SetupResolvers(
 		settingsService:    settingsService,
 		chatService:        chatService,
 		messageService:     messageService,
+		chatObservers:      ChatObservers{ChatObservers: map[uint]*ChatObserver{}, Mutex: &sync.Mutex{}},
+		messageObservers:   MessageObservers{MessageObservers: map[uint]*MessageObserver{}, Mutex: &sync.Mutex{}},
 	}
 }

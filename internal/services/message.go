@@ -13,7 +13,7 @@ import (
 
 type MessageService interface {
 	PostMessage(message models.MessageCore, clientRole models.Role) (models.MessageCore, error)
-	DeleteMessage(id, userID uint) error
+	DeleteMessage(id, userID uint) (receiverID uint, err error)
 	UpdateMessage(id uint, payload string, userID uint) (models.MessageCore, error)
 
 	MessagesFromUser(receiverId, senderId uint, count *int, cursor *string, userID uint) ([]models.MessageCore, int, int, error)
@@ -66,18 +66,18 @@ func (m MessageServiceImpl) PostMessage(message models.MessageCore, clientRole m
 	return m.messageGateway.PostMessage(message)
 }
 
-func (m MessageServiceImpl) DeleteMessage(id, userID uint) error {
+func (m MessageServiceImpl) DeleteMessage(id, userID uint) (receiverID uint, err error) {
 	message, err := m.messageGateway.GetMessageByID(id)
 
 	if err != nil {
-		return utils.ResponseError{
+		return 0, utils.ResponseError{
 			Code:    http.StatusInternalServerError,
 			Message: err.Error(),
 		}
 	}
 
 	if message.SenderID != userID {
-		return utils.ResponseError{
+		return 0, utils.ResponseError{
 			Code:    http.StatusForbidden,
 			Message: consts.ErrAccessDenied,
 		}

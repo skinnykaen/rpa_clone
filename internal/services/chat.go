@@ -10,7 +10,7 @@ import (
 
 type ChatService interface {
 	CreateChat(user1ID, user2ID uint) (models.ChatCore, error)
-	DeleteChat(chatID, userID uint) error
+	DeleteChat(chatID, userID uint) (models.ChatCore, error)
 	Chats(userID uint, page, pageSize *int) ([]models.ChatCore, uint, error)
 }
 
@@ -29,16 +29,16 @@ func (c ChatServiceImpl) CreateChat(user1ID, user2ID uint) (models.ChatCore, err
 	return c.chatGateway.CreateChat(user1ID, user2ID)
 }
 
-func (c ChatServiceImpl) DeleteChat(chatID, userID uint) error {
+func (c ChatServiceImpl) DeleteChat(chatID, userID uint) (models.ChatCore, error) {
 
 	chat, err := c.chatGateway.ChatByID(chatID)
 
 	if err != nil {
-		return err
+		return models.ChatCore{}, err
 	}
 
 	if chat.User1ID != userID && chat.User2ID != userID {
-		return utils.ResponseError{
+		return models.ChatCore{}, utils.ResponseError{
 			Code:    http.StatusForbidden,
 			Message: consts.ErrAccessDenied,
 		}

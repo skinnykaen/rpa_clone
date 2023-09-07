@@ -6,19 +6,17 @@ package resolvers
 
 import (
 	"context"
-	"fmt"
-	"net/http"
-	"strconv"
-
 	"github.com/skinnykaen/rpa_clone/graph"
 	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/models"
 	"github.com/skinnykaen/rpa_clone/pkg/utils"
 	"github.com/vektah/gqlparser/v2/gqlerror"
+	"net/http"
+	"strconv"
 )
 
 // CreateChat is the resolver for the CreateChat field.
-func (r *mutationResolver) CreateChat(ctx context.Context, userID string) (*models.ChatMutationResult, error) {
+func (r *mutationResolver) CreateChat(ctx context.Context, userID string) (*models.ChatHTTP, error) {
 	user1ID := ctx.Value(consts.KeyId).(uint)
 	user2ID, err := strconv.Atoi(userID)
 
@@ -45,11 +43,21 @@ func (r *mutationResolver) CreateChat(ctx context.Context, userID string) (*mode
 		}
 	}
 
-	return &models.ChatMutationResult{
-		ID:      strconv.Itoa(int(chat.ID)),
-		User1Id: strconv.Itoa(int(chat.User1ID)),
-		User2Id: strconv.Itoa(int(chat.User2ID)),
-	}, nil
+	var chatHttp models.ChatHTTP
+	chatHttp.FromCore(chat)
+
+	if err := r.chatObservers.NotifyObserver(uint(user2ID), models.ChatModeCreate, chatHttp); err != nil {
+		if err.Error() != consts.ErrThereIsNoObservers {
+			r.loggers.Err.Printf("%s", err.Error())
+			return nil, &gqlerror.Error{
+				Extensions: map[string]interface{}{
+					"err": err,
+				},
+			}
+		}
+	}
+
+	return &chatHttp, nil
 }
 
 // DeleteChat is the resolver for the DeleteChat field.
@@ -70,12 +78,34 @@ func (r *mutationResolver) DeleteChat(ctx context.Context, chatID string) (*mode
 		}
 	}
 
-	if err := r.chatService.DeleteChat(uint(id), userID); err != nil {
+	chat, err := r.chatService.DeleteChat(uint(id), userID)
+
+	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{
 				"err": err,
 			},
+		}
+	}
+
+	var chatHttp models.ChatHTTP
+	chatHttp.FromCore(chat)
+
+	user2ID := chat.User2ID
+
+	if user2ID == userID {
+		user2ID = chat.User1ID
+	}
+
+	if err := r.chatObservers.NotifyObserver(user2ID, models.ChatModeDelete, chatHttp); err != nil {
+		if err.Error() != consts.ErrThereIsNoObservers {
+			r.loggers.Err.Printf("%s", err.Error())
+			return nil, &gqlerror.Error{
+				Extensions: map[string]interface{}{
+					"err": err,
+				},
+			}
 		}
 	}
 
@@ -111,9 +141,27 @@ func (r *queryResolver) Chats(ctx context.Context, page *int, pageSize *int) (*m
 	}, nil
 }
 
-// UserJoined is the resolver for the UserJoined field.
-func (r *subscriptionResolver) UserJoined(ctx context.Context, userID string, chatID string) (<-chan *models.MessageHTTP, error) {
-	panic(fmt.Errorf("not implemented: UserJoined - UserJoined"))
+// ChatSubscription is the resolver for the ChatSubscription field.
+func (r *subscriptionResolver) ChatSubscription(ctx context.Context, mode *models.ChatMode) (<-chan *models.ChatForSubscription, error) {
+	userID := ctx.Value(consts.KeyId).(uint)
+
+	channel, err := r.chatObservers.CreateObserver(userID, mode)
+
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
+	}
+
+	go func() {
+		<-ctx.Done()
+		_ = r.chatObservers.DeleteObserver(userID)
+	}()
+
+	return channel, nil
 }
 
 // Subscription returns graph.SubscriptionResolver implementation.

@@ -4,12 +4,13 @@ import (
 	"github.com/skinnykaen/rpa_clone/internal/db"
 	"github.com/skinnykaen/rpa_clone/internal/models"
 	"github.com/skinnykaen/rpa_clone/pkg/utils"
+	"gorm.io/gorm/clause"
 	"net/http"
 )
 
 type MessageGateway interface {
 	PostMessage(message models.MessageCore) (models.MessageCore, error)
-	DeleteMessage(id uint) error
+	DeleteMessage(id uint) (receiverID uint, err error)
 	UpdateMessage(id uint, payload string) (models.MessageCore, error)
 
 	MessagesFromUser(receiverId, senderId uint) ([]models.MessageCore, error)
@@ -39,16 +40,19 @@ func (m MessageGatewayImpl) PostMessage(message models.MessageCore) (models.Mess
 
 }
 
-func (m MessageGatewayImpl) DeleteMessage(id uint) error {
+func (m MessageGatewayImpl) DeleteMessage(id uint) (receiverID uint, err error) {
 
-	if err := m.postgresClient.Db.Delete(&models.MessageCore{}, id).Error; err != nil {
-		return utils.ResponseError{
+	var mes models.MessageCore
+
+	if err := m.postgresClient.Db.Clauses(clause.Returning{Columns: []clause.Column{{Name: "receiver_id"}}}).
+		Delete(&mes, id).Error; err != nil {
+		return 0, utils.ResponseError{
 			Code:    http.StatusInternalServerError,
 			Message: err.Error(),
 		}
 	}
 
-	return nil
+	return mes.ReceiverID, nil
 }
 
 func (m MessageGatewayImpl) UpdateMessage(id uint, payload string) (models.MessageCore, error) {
@@ -64,7 +68,7 @@ func (m MessageGatewayImpl) UpdateMessage(id uint, payload string) (models.Messa
 	}
 
 	if err := m.postgresClient.Db.Preload("Sender").Preload("Receiver").
-		First(&message).Error; err != nil {
+		First(&message, id).Error; err != nil {
 		return models.MessageCore{}, utils.ResponseError{
 			Code:    http.StatusInternalServerError,
 			Message: err.Error(),

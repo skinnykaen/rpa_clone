@@ -11,7 +11,7 @@ import (
 
 type ChatGateway interface {
 	CreateChat(user1ID, user2ID uint) (models.ChatCore, error)
-	DeleteChat(chatID uint) error
+	DeleteChat(chatID uint) (models.ChatCore, error)
 	Chats(userID uint, offset, limit int) ([]models.ChatCore, uint, error)
 
 	ChatByUsers(user1ID, user2ID uint) (models.ChatCore, error)
@@ -49,25 +49,54 @@ func (c ChatGatewayImpl) CreateChat(user1ID, user2ID uint) (models.ChatCore, err
 	}
 
 	if err := c.postgresClient.Db.Omit("User1", "User2").Create(&chat).Error; err != nil {
+
 		return models.ChatCore{}, utils.ResponseError{
 			Code:    http.StatusInternalServerError,
 			Message: err.Error(),
 		}
 	}
 
-	return chat, err
-}
-
-func (c ChatGatewayImpl) DeleteChat(chatID uint) error {
-
-	if err := c.postgresClient.Db.Delete(&models.ChatCore{}, chatID).Error; err != nil {
-		return utils.ResponseError{
+	if err := c.postgresClient.Db.Preload("User1").Preload("User2").
+		First(&chat, chat.ID).Error; err != nil {
+		return models.ChatCore{}, utils.ResponseError{
 			Code:    http.StatusInternalServerError,
 			Message: err.Error(),
 		}
 	}
 
-	return nil
+	return chat, nil
+}
+
+func (c ChatGatewayImpl) DeleteChat(chatID uint) (models.ChatCore, error) {
+
+	var chat models.ChatCore
+
+	if err := c.postgresClient.Db.Transaction(func(tx *gorm.DB) error {
+
+		err := c.postgresClient.Db.Preload("User1").Preload("User2").First(&chat, chatID).Error
+
+		if err != nil {
+			return err
+		}
+
+		err = c.postgresClient.Db.Unscoped().Where("chat_id = ?", chatID).Delete(&models.MessageCore{}).Error
+
+		if err != nil {
+			return err
+		}
+
+		err = c.postgresClient.Db.Unscoped().Delete(&models.ChatCore{}, chatID).Error
+
+		return err
+
+	}); err != nil {
+		return models.ChatCore{}, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
+	}
+
+	return chat, nil
 }
 
 func (c ChatGatewayImpl) Chats(userID uint, offset, limit int) ([]models.ChatCore, uint, error) {

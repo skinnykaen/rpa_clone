@@ -24,6 +24,11 @@ const (
 	ErrChatWithYourself    = "creating chat with yourself"
 )
 
+// http code 500
+const (
+	ErrThereIsNoObservers = "there is no connection to the observer"
+)
+
 // ErrActivationLinkUnavailable have http code 503
 const (
 	ErrActivationLinkUnavailable = "activation link is currently unavailable"
