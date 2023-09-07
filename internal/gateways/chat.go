@@ -1,7 +1,6 @@
 package gateways
 
 import (
-	"errors"
 	"github.com/skinnykaen/rpa_clone/internal/db"
 	"github.com/skinnykaen/rpa_clone/internal/models"
 	"github.com/skinnykaen/rpa_clone/pkg/utils"
@@ -37,7 +36,7 @@ func (c ChatGatewayImpl) CreateChat(user1ID, user2ID uint) (models.ChatCore, err
 		return chat, nil
 
 		// Если была возвращена ошибка и она говорит о том, что запись не найдена, то создаем новую запись
-	} else if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
+	} else if err != nil && err.Error() != gorm.ErrRecordNotFound.Error() {
 		return models.ChatCore{}, err
 	}
 
