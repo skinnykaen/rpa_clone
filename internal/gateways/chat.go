@@ -72,21 +72,15 @@ func (c ChatGatewayImpl) DeleteChat(chatID uint) (models.ChatCore, error) {
 
 	if err := c.postgresClient.Db.Transaction(func(tx *gorm.DB) error {
 
-		err := c.postgresClient.Db.Preload("User1").Preload("User2").First(&chat, chatID).Error
-
-		if err != nil {
+		if err := c.postgresClient.Db.Preload("User1").Preload("User2").First(&chat, chatID).Error; err != nil {
 			return err
 		}
 
-		err = c.postgresClient.Db.Unscoped().Where("chat_id = ?", chatID).Delete(&models.MessageCore{}).Error
-
-		if err != nil {
+		if err := c.postgresClient.Db.Unscoped().Where("chat_id = ?", chatID).Delete(&models.MessageCore{}).Error; err != nil {
 			return err
 		}
 
-		err = c.postgresClient.Db.Unscoped().Delete(&models.ChatCore{}, chatID).Error
-
-		return err
+		return c.postgresClient.Db.Unscoped().Delete(&models.ChatCore{}, chatID).Error
 
 	}); err != nil {
 		return models.ChatCore{}, utils.ResponseError{

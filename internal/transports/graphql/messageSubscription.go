@@ -92,20 +92,17 @@ func (m MessageObservers) NotifyObserver(userID uint, mode models.MessageMode, m
 	observer, ok := m.MessageObservers[userID]
 	m.Mutex.Unlock()
 
-	if ok {
+	if ok && observer.Modes[mode] {
+		m.Mutex.Lock()
 
-		if observer.Modes[mode] {
-			m.Mutex.Lock()
-
-			observer.Channel <- &models.MessageForSubscription{
-				MessageHTTP: &message,
-				MessageMode: mode,
-			}
-
-			m.Mutex.Unlock()
-
-			return nil
+		observer.Channel <- &models.MessageForSubscription{
+			MessageHTTP: &message,
+			MessageMode: mode,
 		}
+
+		m.Mutex.Unlock()
+
+		return nil
 	}
 
 	return utils.ResponseError{

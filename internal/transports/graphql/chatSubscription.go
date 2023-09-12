@@ -85,19 +85,17 @@ func (c ChatObservers) NotifyObserver(userID uint, mode models.ChatMode, chat mo
 	observer, ok := c.ChatObservers[userID]
 	c.Mutex.Unlock()
 
-	if ok {
-		if observer.Modes[mode] {
-			c.Mutex.Lock()
+	if ok && observer.Modes[mode] {
+		c.Mutex.Lock()
 
-			observer.Channel <- &models.ChatForSubscription{
-				ChatHTTP: &chat,
-				ChatMode: mode,
-			}
-
-			c.Mutex.Unlock()
-
-			return nil
+		observer.Channel <- &models.ChatForSubscription{
+			ChatHTTP: &chat,
+			ChatMode: mode,
 		}
+
+		c.Mutex.Unlock()
+
+		return nil
 	}
 
 	return utils.ResponseError{

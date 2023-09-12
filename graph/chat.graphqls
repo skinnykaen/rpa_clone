@@ -20,15 +20,15 @@ type ChatForSubscription{
 }
 
 extend type Query {
-    Chats(page: Int, pageSize: Int): ChatsList! @hasRole(roles: [SuperAdmin, Student])
+    Chats(page: Int, pageSize: Int): ChatsList! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
 }
 
 extend type Mutation {
-    CreateChat(userId:ID!): ChatHttp! @hasRole(roles: [SuperAdmin, Student])
+    CreateChat(userId:ID!): ChatHttp! @hasRole(roles:[SuperAdmin, UnitAdmin, Teacher, Parent, Student])
 
-    DeleteChat(chatId:ID!):Response! @hasRole(roles: [SuperAdmin, Student])
+    DeleteChat(chatId:ID!):Response! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
 }
 
 type Subscription {
-    ChatSubscription(mode:ChatMode):ChatForSubscription! @hasRole(roles: [SuperAdmin, Student])
+    ChatSubscription(mode:ChatMode):ChatForSubscription! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
 }
