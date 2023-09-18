@@ -26,3 +26,8 @@ const (
 const (
 	ErrActivationLinkUnavailable = "activation link is currently unavailable"
 )
+
+// ErrIncorrectInputParam edx errors
+const (
+	ErrIncorrectInputParam = "error incorrect input params"
+)

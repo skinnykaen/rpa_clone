@@ -16,10 +16,10 @@ type AbsoluteMediaHTTP struct {
 
 type CourseAPIMediaCollectionHTTP struct {
 	ID          string             `json:"id"`
-	BannerImage *AbsoluteMediaHTTP `json:"banner_image,omitempty"`
-	CourseImage *MediaHTTP         `json:"course_image,omitempty"`
-	CourseVideo *MediaHTTP         `json:"course_video,omitempty"`
-	Image       *ImageHTTP         `json:"image,omitempty"`
+	BannerImage *AbsoluteMediaHTTP `json:"banner_image"`
+	CourseImage *MediaHTTP         `json:"course_image"`
+	CourseVideo *MediaHTTP         `json:"course_video"`
+	Image       *ImageHTTP         `json:"image"`
 }
 
 type CourseHTTP struct {
@@ -40,14 +40,15 @@ type CourseHTTP struct {
 	MobileAvailable  bool                          `json:"mobile_available"`
 	Hidden           bool                          `json:"hidden"`
 	InvitationOnly   bool                          `json:"invitation_only"`
-	Overview         *string                       `json:"overview,omitempty"`
+	Overview         *string                       `json:"overview"`
 	CourseID         string                        `json:"course_id"`
 	Media            *CourseAPIMediaCollectionHTTP `json:"media"`
 }
 
 type CoursesListHTTP struct {
-	Courses   []*CourseHTTP `json:"courses"`
-	CountRows int           `json:"countRows"`
+	Results    []*CourseHTTP `json:"results"`
+	Pagination *Pagination   `json:"pagination"`
+	CountRows  int           `json:"countRows"`
 }
 
 type ImageHTTP struct {
@@ -89,6 +90,13 @@ type NewUserResponse struct {
 	Firstname  string `json:"firstname"`
 	Lastname   string `json:"lastname"`
 	Middlename string `json:"middlename"`
+}
+
+type Pagination struct {
+	Next     string `json:"next"`
+	Previous string `json:"previous"`
+	Count    int    `json:"count"`
+	NumPages int    `json:"num_pages"`
 }
 
 type ProjectPageHTTP struct {

@@ -136,37 +136,3 @@ func (r *queryResolver) GetAllRobboUnitByAccessToken(ctx context.Context, page *
 		CountRows:  int(countRows),
 	}, nil
 }
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//     it when you're done.
-//   - You have helper methods in this file. Move them out to keep these resolver files clean.
-func (r *queryResolver) GetRobboUnitsByUnitAdminID(ctx context.Context, page *int, pageSize *int, unitAdminID string) (*models.RobboUnitHTTPList, error) {
-	atoi, err := strconv.Atoi(unitAdminID)
-	if err != nil {
-		r.loggers.Err.Printf("%s", err.Error())
-		return nil, &gqlerror.Error{
-			Extensions: map[string]interface{}{
-				"err": utils.ResponseError{
-					Code:    http.StatusBadRequest,
-					Message: consts.ErrAtoi,
-				},
-			},
-		}
-	}
-	robboUnits, countRows, err := r.robboUnitService.GetAllRobboUnits(page, pageSize, uint(atoi), models.RoleUnitAdmin)
-	if err != nil {
-		r.loggers.Err.Printf("%s", err.Error())
-		return nil, &gqlerror.Error{
-			Extensions: map[string]interface{}{
-				"err": err,
-			},
-		}
-	}
-	return &models.RobboUnitHTTPList{
-		RobboUnits: models.FromRobboUnitsCore(robboUnits),
-		CountRows:  int(countRows),
-	}, nil
-}

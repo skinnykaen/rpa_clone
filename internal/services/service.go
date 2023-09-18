@@ -17,6 +17,8 @@ type Services struct {
 	RobboGroupService    RobboGroupService
 	RobboUnitRelService  RobboUnitRelService
 	RobboGroupRelService RobboGroupRelService
+	CourseService        CourseService
+	EdxService           EdxService
 }
 
 func SetupServices(
@@ -69,5 +71,9 @@ func SetupServices(
 		RobboGroupRelService: &RobboGroupRelServiceImpl{
 			robboGroupRelGateway: robboGroupRelGateway,
 		},
+		CourseService: &CourseServiceImpl{
+			edxService: EdxServiceImpl{},
+		},
+		EdxService: &EdxServiceImpl{},
 	}
 }
