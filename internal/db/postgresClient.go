@@ -78,6 +78,10 @@ func (c *PostgresClient) Migrate() (err error) {
 		&models.SettingsCore{},
 		&models.MessageCore{},
 		&models.ChatCore{},
+		&models.RobboUnitCore{},
+		&models.RobboGroupCore{},
+		&models.RobboUnitRelCore{},
+		&models.RobboGroupRelCore{},
 	)
 	if err != nil {
 		return err

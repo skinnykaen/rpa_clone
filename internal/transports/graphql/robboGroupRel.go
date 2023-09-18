@@ -15,10 +15,10 @@ import (
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
-// CreateParentRel is the resolver for the CreateParentRel field.
-func (r *mutationResolver) CreateParentRel(ctx context.Context, coreRelID string, targetRelID string) (*models.Response, error) {
-	atoiC, errC := strconv.Atoi(coreRelID)
-	atoiT, errT := strconv.Atoi(targetRelID)
+// CreateRobboGroupRel is the resolver for the CreateRobboGroupRel field.
+func (r *mutationResolver) CreateRobboGroupRel(ctx context.Context, coreRelID string, targetRelID string) (*models.Response, error) {
+	robboGroupId, errC := strconv.Atoi(coreRelID)
+	userId, errT := strconv.Atoi(targetRelID)
 	if errC != nil {
 		r.loggers.Err.Printf("%s", errC.Error())
 		return nil, &gqlerror.Error{
@@ -41,7 +41,7 @@ func (r *mutationResolver) CreateParentRel(ctx context.Context, coreRelID string
 			},
 		}
 	}
-	_, err := r.parentRelService.CreateRel(uint(atoiC), uint(atoiT))
+	_, err := r.robboGroupRelService.CreateRel(uint(userId), uint(robboGroupId))
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{
@@ -53,12 +53,12 @@ func (r *mutationResolver) CreateParentRel(ctx context.Context, coreRelID string
 	return &models.Response{Ok: true}, nil
 }
 
-// DeleteParentRel is the resolver for the DeleteParentRel field.
-func (r *mutationResolver) DeleteParentRel(ctx context.Context, parentID string, childID string) (*models.Response, error) {
-	atoiP, errP := strconv.Atoi(parentID)
-	atoiC, errC := strconv.Atoi(childID)
-	if errP != nil {
-		r.loggers.Err.Printf("%s", errP.Error())
+// DeleteRobboGroupRel is the resolver for the DeleteRobboGroupRel field.
+func (r *mutationResolver) DeleteRobboGroupRel(ctx context.Context, userID string, robboGroupID string) (*models.Response, error) {
+	atoiU, errU := strconv.Atoi(userID)
+	atoiR, errR := strconv.Atoi(robboGroupID)
+	if errU != nil {
+		r.loggers.Err.Printf("%s", errU.Error())
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{
 				"err": utils.ResponseError{
@@ -68,8 +68,8 @@ func (r *mutationResolver) DeleteParentRel(ctx context.Context, parentID string,
 			},
 		}
 	}
-	if errC != nil {
-		r.loggers.Err.Printf("%s", errC.Error())
+	if errR != nil {
+		r.loggers.Err.Printf("%s", errR.Error())
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{
 				"err": utils.ResponseError{
@@ -79,7 +79,7 @@ func (r *mutationResolver) DeleteParentRel(ctx context.Context, parentID string,
 			},
 		}
 	}
-	if err := r.parentRelService.DeleteRel(uint(atoiP), uint(atoiC)); err != nil {
+	if err := r.robboGroupRelService.DeleteRel(uint(atoiU), uint(atoiR)); err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{
@@ -91,9 +91,9 @@ func (r *mutationResolver) DeleteParentRel(ctx context.Context, parentID string,
 	}
 }
 
-// GetChildrenByParent is the resolver for the GetChildrenByParent field.
-func (r *queryResolver) GetChildrenByParent(ctx context.Context, parentID string) (*models.UsersList, error) {
-	atoi, err := strconv.Atoi(parentID)
+// GetStudentsByRobboGroupID is the resolver for the GetStudentsByRobboGroupId field.
+func (r *queryResolver) GetStudentsByRobboGroupID(ctx context.Context, page *int, pageSize *int, robboGroupID string) (*models.UsersList, error) {
+	atoi, err := strconv.Atoi(robboGroupID)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{
@@ -105,7 +105,7 @@ func (r *queryResolver) GetChildrenByParent(ctx context.Context, parentID string
 			},
 		}
 	}
-	children, err := r.parentRelService.GetChildrenByParentId(uint(atoi))
+	students, countRows, err := r.robboGroupRelService.GetStudentsByRobboGroupId(page, pageSize, uint(atoi))
 	if err != nil {
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{
@@ -114,14 +114,14 @@ func (r *queryResolver) GetChildrenByParent(ctx context.Context, parentID string
 		}
 	}
 	return &models.UsersList{
-		Users:     models.FromUsersCore(children),
-		CountRows: len(children),
+		Users:     models.FromUsersCore(students),
+		CountRows: countRows,
 	}, nil
 }
 
-// GetParentsByChild is the resolver for the GetParentsByChild field.
-func (r *queryResolver) GetParentsByChild(ctx context.Context, childID string) (*models.UsersList, error) {
-	atoi, err := strconv.Atoi(childID)
+// GetTeachersByRobboGroupID is the resolver for the GetTeachersByRobboGroupId field.
+func (r *queryResolver) GetTeachersByRobboGroupID(ctx context.Context, page *int, pageSize *int, robboGroupID string) (*models.UsersList, error) {
+	atoi, err := strconv.Atoi(robboGroupID)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{
@@ -133,7 +133,7 @@ func (r *queryResolver) GetParentsByChild(ctx context.Context, childID string) (
 			},
 		}
 	}
-	parents, err := r.parentRelService.GetParentsByChildId(uint(atoi))
+	students, countRows, err := r.robboGroupRelService.GetTeachersByRobboGroupId(page, pageSize, uint(atoi))
 	if err != nil {
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{
@@ -142,7 +142,35 @@ func (r *queryResolver) GetParentsByChild(ctx context.Context, childID string) (
 		}
 	}
 	return &models.UsersList{
-		Users:     models.FromUsersCore(parents),
-		CountRows: len(parents),
+		Users:     models.FromUsersCore(students),
+		CountRows: countRows,
+	}, nil
+}
+
+// GetRobboGroupsByUserID is the resolver for the GetRobboGroupsByUserId field.
+func (r *queryResolver) GetRobboGroupsByUserID(ctx context.Context, userID string) (*models.RobboGroupHTTPList, error) {
+	atoi, err := strconv.Atoi(userID)
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusBadRequest,
+					Message: consts.ErrAtoi,
+				},
+			},
+		}
+	}
+	robboGroups, err := r.robboGroupRelService.GetRobboGroupsByUserId(uint(atoi))
+	if err != nil {
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
+	}
+	return &models.RobboGroupHTTPList{
+		RobboGroups: models.FromRobboGroupsCore(robboGroups),
+		CountRows:   len(robboGroups),
 	}, nil
 }

@@ -19,7 +19,6 @@ type ProjectPageService interface {
 }
 
 type ProjectPageServiceImpl struct {
-	projectGateway     gateways.ProjectGateway
 	projectPageGateway gateways.ProjectPageGateway
 }
 
