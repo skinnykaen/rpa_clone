@@ -3,9 +3,16 @@ package resolvers
 import (
 	"github.com/skinnykaen/rpa_clone/internal/services"
 	"github.com/skinnykaen/rpa_clone/pkg/logger"
+	"sync"
 )
 
 type Resolver struct {
+	chatService        services.ChatService
+	messageService     services.MessageService
+
+	chatObservers    ChatObservers
+	messageObservers MessageObservers
+  
 	loggers              logger.Loggers
 	userService          services.UserService
 	authService          services.AuthService
@@ -25,6 +32,8 @@ func SetupResolvers(
 	authService services.AuthService,
 	projectPageService services.ProjectPageService,
 	settingsService services.SettingsService,
+	chatService services.ChatService,
+	messageService services.MessageService,
 	parentRelService services.ParentRelService,
 	robboUnitService services.RobboUnitService,
 	robboGroupService services.RobboGroupService,
@@ -33,12 +42,16 @@ func SetupResolvers(
 	courseService services.CourseService,
 ) Resolver {
 	return Resolver{
-		loggers:              loggers,
-		userService:          userService,
-		authService:          authService,
-		projectPageService:   projectPageService,
-		settingsService:      settingsService,
-		parentRelService:     parentRelService,
+		loggers:            loggers,
+		userService:        userService,
+		authService:        authService,
+		projectPageService: projectPageService,
+		settingsService:    settingsService,
+		chatService:        chatService,
+		messageService:     messageService,
+		chatObservers:      ChatObservers{ChatObservers: map[uint]*ChatObserver{}, Mutex: &sync.Mutex{}},
+		messageObservers:   MessageObservers{MessageObservers: map[uint]*MessageObserver{}, Mutex: &sync.Mutex{}},
+    parentRelService:     parentRelService,
 		robboUnitService:     robboUnitService,
 		robboGroupService:    robboGroupService,
 		robboUnitRelService:  robboUnitRelService,

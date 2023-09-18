@@ -7,6 +7,8 @@ import (
 
 type Gateways struct {
 	fx.Out
+	ChatGateway    ChatGateway
+	MessageGateway MessageGateway
 	User          UserGateway
 	ParentRel     ParentRelGateway
 	Project       ProjectGateway
@@ -19,10 +21,10 @@ type Gateways struct {
 }
 
 func SetupGateways(pc db.PostgresClient) Gateways {
-	return Gateways{
-		User: UserGatewayImpl{
-			postgresClient: pc,
-		},
+	return Gateways{		
+		ChatGateway:    ChatGatewayImpl{pc},
+		MessageGateway: MessageGatewayImpl{pc},
+		User:          UserGatewayImpl{pc},
 		ParentRel:     ParentRelGatewayImpl{pc},
 		Project:       ProjectGatewayImpl{pc},
 		ProjectPage:   ProjectPageGatewayImpl{pc},

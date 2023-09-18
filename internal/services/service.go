@@ -7,6 +7,8 @@ import (
 
 type Services struct {
 	fx.Out
+	ChatService        ChatService
+	MessageService     MessageService
 	UserService          UserService
 	AuthService          AuthService
 	ProjectService       ProjectService
@@ -26,6 +28,8 @@ func SetupServices(
 	projectGateway gateways.ProjectGateway,
 	projectPageGateway gateways.ProjectPageGateway,
 	settingsGateway gateways.SettingsGateway,
+	chatGateway gateways.ChatGateway,
+	messageGateway gateways.MessageGateway,
 	parentRelGateway gateways.ParentRelGateway,
 	robboUnitGateway gateways.RobboUnitGateway,
 	robboGroupGateway gateways.RobboGroupGateway,
@@ -52,6 +56,14 @@ func SetupServices(
 		},
 		SettingsService: &SettingsServiceImpl{
 			settingsGateway: settingsGateway,
+		},
+		ChatService: &ChatServiceImpl{
+			chatGateway: chatGateway,
+		},
+		MessageService: &MessageServiceImpl{
+			messageGateway: messageGateway,
+			getterChat:     chatGateway,
+			getterUserByID: userGateway,
 		},
 		ParentRelService: &ParentRelServiceImpl{
 			parentRelGateway: parentRelGateway,

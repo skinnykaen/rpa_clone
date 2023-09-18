@@ -20,6 +20,13 @@ const (
 	ErrUserIsNotActive     = "user is not active. please check your email"
 	ErrProjectPageIsBanned = "the projectPage is banned. no access"
 	ErrAccessDenied        = "access denied"
+	ErrMessagingToYourself = "sending a message to yourself"
+	ErrChatWithYourself    = "creating chat with yourself"
+)
+
+// http code 500
+const (
+	ErrThereIsNoObservers = "there is no connection to the observer"
 )
 
 // ErrActivationLinkUnavailable have http code 503

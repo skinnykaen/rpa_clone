@@ -1,0 +1,34 @@
+type ChatHttp {
+    id: ID!
+    user1: UserHttp!
+    user2: UserHttp!
+}
+
+type ChatsList{
+    chats: [ChatHttp!]!
+    countRows: Int!
+}
+
+enum ChatMode{
+    Create
+    Delete
+}
+
+type ChatForSubscription{
+    chatHttp:ChatHttp!
+    chatMode:ChatMode!
+}
+
+extend type Query {
+    Chats(page: Int, pageSize: Int): ChatsList! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
+}
+
+extend type Mutation {
+    CreateChat(userId:ID!): ChatHttp! @hasRole(roles:[SuperAdmin, UnitAdmin, Teacher, Parent, Student])
+
+    DeleteChat(chatId:ID!):Response! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
+}
+
+type Subscription {
+    ChatSubscription(mode:ChatMode):ChatForSubscription! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
+}

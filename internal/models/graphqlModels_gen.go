@@ -6,12 +6,29 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"time"
 )
 
 type AbsoluteMediaHTTP struct {
 	ID          string `json:"id"`
 	URI         string `json:"uri"`
 	URIAbsolute string `json:"uri_absolute"`
+}
+
+type ChatForSubscription struct {
+	ChatHTTP *ChatHTTP `json:"chatHttp"`
+	ChatMode ChatMode  `json:"chatMode"`
+}
+
+type ChatHTTP struct {
+	ID    string    `json:"id"`
+	User1 *UserHTTP `json:"user1"`
+	User2 *UserHTTP `json:"user2"`
+}
+
+type ChatsList struct {
+	Chats     []*ChatHTTP `json:"chats"`
+	CountRows int         `json:"countRows"`
 }
 
 type CourseAPIMediaCollectionHTTP struct {
@@ -63,6 +80,36 @@ type MediaHTTP struct {
 	URI string `json:"uri"`
 }
 
+type MessageEdge struct {
+	Node   *MessageHTTP `json:"node,omitempty"`
+	Cursor string       `json:"cursor"`
+}
+
+type MessageForSubscription struct {
+	MessageHTTP *MessageHTTP `json:"messageHttp"`
+	MessageMode MessageMode  `json:"messageMode"`
+}
+
+type MessageHTTP struct {
+	ID        string     `json:"id"`
+	Payload   string     `json:"payload"`
+	Receiver  *UserHTTP  `json:"receiver"`
+	Sender    *UserHTTP  `json:"sender"`
+	ChatID    string     `json:"chatId"`
+	SentAt    time.Time  `json:"sentAt"`
+	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
+}
+
+type MessagesFromUserInput struct {
+	ReceiverID string `json:"receiverId"`
+	SenderID   string `json:"senderId"`
+}
+
+type NewMessage struct {
+	Payload    string `json:"payload"`
+	ReceiverID string `json:"receiverId"`
+}
+
 type NewRobboGroup struct {
 	Name        string `json:"name"`
 	RobboUnitID string `json:"robboUnitId"`
@@ -90,6 +137,12 @@ type NewUserResponse struct {
 	Firstname  string `json:"firstname"`
 	Lastname   string `json:"lastname"`
 	Middlename string `json:"middlename"`
+}
+
+type PageInfo struct {
+	StartCursor string `json:"startCursor"`
+	EndCursor   string `json:"endCursor"`
+	HasNextPage bool   `json:"hasNextPage"`
 }
 
 type Pagination struct {
@@ -218,6 +271,90 @@ type UserHTTP struct {
 type UsersList struct {
 	Users     []*UserHTTP `json:"users"`
 	CountRows int         `json:"countRows"`
+}
+
+type ChatMode string
+
+const (
+	ChatModeCreate ChatMode = "Create"
+	ChatModeDelete ChatMode = "Delete"
+)
+
+var AllChatMode = []ChatMode{
+	ChatModeCreate,
+	ChatModeDelete,
+}
+
+func (e ChatMode) IsValid() bool {
+	switch e {
+	case ChatModeCreate, ChatModeDelete:
+		return true
+	}
+	return false
+}
+
+func (e ChatMode) String() string {
+	return string(e)
+}
+
+func (e *ChatMode) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ChatMode(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ChatMode", str)
+	}
+	return nil
+}
+
+func (e ChatMode) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type MessageMode string
+
+const (
+	MessageModeCreate MessageMode = "Create"
+	MessageModeDelete MessageMode = "Delete"
+	MessageModeUpdate MessageMode = "Update"
+)
+
+var AllMessageMode = []MessageMode{
+	MessageModeCreate,
+	MessageModeDelete,
+	MessageModeUpdate,
+}
+
+func (e MessageMode) IsValid() bool {
+	switch e {
+	case MessageModeCreate, MessageModeDelete, MessageModeUpdate:
+		return true
+	}
+	return false
+}
+
+func (e MessageMode) String() string {
+	return string(e)
+}
+
+func (e *MessageMode) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = MessageMode(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid MessageMode", str)
+	}
+	return nil
+}
+
+func (e MessageMode) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
 type Role string
