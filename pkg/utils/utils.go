@@ -15,7 +15,6 @@ func SendEmail(subject, to, body string) (err error) {
 	from := viper.GetString("mail_username")
 	pass := viper.GetString("mail_password")
 	e := email.NewEmail()
-	// TODO config from prefix
 	e.From = "Robbo <" + from + ">"
 	e.To = []string{to}
 	e.Subject = subject
