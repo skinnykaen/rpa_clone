@@ -6,13 +6,14 @@ package resolvers
 
 import (
 	"context"
+	"net/http"
+	"strconv"
+
 	"github.com/skinnykaen/rpa_clone/graph"
 	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/models"
 	"github.com/skinnykaen/rpa_clone/pkg/utils"
 	"github.com/vektah/gqlparser/v2/gqlerror"
-	"net/http"
-	"strconv"
 )
 
 // CreateChat is the resolver for the CreateChat field.
@@ -112,8 +113,8 @@ func (r *mutationResolver) DeleteChat(ctx context.Context, chatID string) (*mode
 	return &models.Response{Ok: true}, nil
 }
 
-// Chats is the resolver for the Chats field.
-func (r *queryResolver) Chats(ctx context.Context, page *int, pageSize *int) (*models.ChatsList, error) {
+// GetChats is the resolver for the GetChats field.
+func (r *queryResolver) GetChats(ctx context.Context, page *int, pageSize *int) (*models.ChatsList, error) {
 	userID := ctx.Value(consts.KeyId).(uint)
 
 	chats, countRows, err := r.chatService.Chats(userID, page, pageSize)

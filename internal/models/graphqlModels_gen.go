@@ -33,10 +33,10 @@ type ChatsList struct {
 
 type CourseAPIMediaCollectionHTTP struct {
 	ID          string             `json:"id"`
-	BannerImage *AbsoluteMediaHTTP `json:"banner_image"`
-	CourseImage *MediaHTTP         `json:"course_image"`
-	CourseVideo *MediaHTTP         `json:"course_video"`
-	Image       *ImageHTTP         `json:"image"`
+	BannerImage *AbsoluteMediaHTTP `json:"banner_image,omitempty"`
+	CourseImage *MediaHTTP         `json:"course_image,omitempty"`
+	CourseVideo *MediaHTTP         `json:"course_video,omitempty"`
+	Image       *ImageHTTP         `json:"image,omitempty"`
 }
 
 type CourseHTTP struct {
@@ -57,7 +57,7 @@ type CourseHTTP struct {
 	MobileAvailable  bool                          `json:"mobile_available"`
 	Hidden           bool                          `json:"hidden"`
 	InvitationOnly   bool                          `json:"invitation_only"`
-	Overview         *string                       `json:"overview"`
+	Overview         *string                       `json:"overview,omitempty"`
 	CourseID         string                        `json:"course_id"`
 	Media            *CourseAPIMediaCollectionHTTP `json:"media"`
 }

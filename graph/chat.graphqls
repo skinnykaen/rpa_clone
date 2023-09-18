@@ -20,7 +20,7 @@ type ChatForSubscription{
 }
 
 extend type Query {
-    Chats(page: Int, pageSize: Int): ChatsList! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
+    GetChats(page: Int, pageSize: Int): ChatsList! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
 }
 
 extend type Mutation {
