@@ -6,17 +6,45 @@ package resolvers
 
 import (
 	"context"
-	"fmt"
-
+	"github.com/skinnykaen/rpa_clone/internal/consts"
 	"github.com/skinnykaen/rpa_clone/internal/models"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
 // GetCourseByID is the resolver for the GetCourseById field.
 func (r *queryResolver) GetCourseByID(ctx context.Context, id string) (*models.CourseHTTP, error) {
-	panic(fmt.Errorf("not implemented: GetCourseByID - GetCourseById"))
+	course, err := r.courseService.GetCourseById(id)
+	if err != nil {
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
+	}
+
+	var courseHttp models.CourseHTTP
+	courseHttp.FromCore(&course)
+
+	return &courseHttp, nil
 }
 
 // GetCoursesByUser is the resolver for the GetCoursesByUser field.
 func (r *queryResolver) GetCoursesByUser(ctx context.Context) (*models.CoursesListHTTP, error) {
-	panic(fmt.Errorf("not implemented: GetCoursesByUser - GetCoursesByUser"))
+	clientId := ctx.Value(consts.KeyId).(uint)
+	clientRole := ctx.Value(consts.KeyRole).(models.Role)
+
+	courses, err := r.courseService.GetCoursesByUser(clientId, clientRole)
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
+	}
+
+	return &models.CoursesListHTTP{
+		Results:   models.FromCoursesCore(courses.Results),
+		CountRows: courses.Pagination.Count,
+	}, nil
 }

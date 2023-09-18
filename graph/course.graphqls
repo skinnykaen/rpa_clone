@@ -1,5 +1,5 @@
 type CourseHttp {
-	id: ID!
+	id: String!
 	blocks_url: String!
 	effort: String!
 	enrollment_start: Timestamp!
@@ -22,7 +22,7 @@ type CourseHttp {
 }
 
 type CourseAPIMediaCollectionHttp {
-	id: ID!
+	id: String!
 	banner_image: AbsoluteMediaHttp
 	course_image: MediaHttp
 	course_video: MediaHttp
@@ -30,29 +30,37 @@ type CourseAPIMediaCollectionHttp {
 }
 
 type AbsoluteMediaHttp {
-	id: ID!
+	id: String!
 	uri: String!
 	uri_absolute: String!
 }
 
 type ImageHttp {
-	id: ID!
+	id: String!
 	raw: String!
 	small: String!
 	large: String!
 }
 
 type MediaHttp {
-	id: ID!
+	id: String!
 	uri: String!
 }
 
+type Pagination {
+	next: String!
+	previous: String!
+	count: Int!
+	num_pages: Int!
+}
+
 type CoursesListHttp {
-	courses:    [CourseHttp!]!
+	results:    [CourseHttp!]!
+	pagination: Pagination!
 	countRows: Int!
 }
 
 extend type Query {
-	GetCourseById(id: ID!): CourseHttp! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Student])
+	GetCourseById(id: String!): CourseHttp! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Student])
 	GetCoursesByUser: CoursesListHttp! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Student])
 }

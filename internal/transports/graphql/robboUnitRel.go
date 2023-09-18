@@ -15,10 +15,10 @@ import (
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
-// CreateParentRel is the resolver for the CreateParentRel field.
-func (r *mutationResolver) CreateParentRel(ctx context.Context, coreRelID string, targetRelID string) (*models.Response, error) {
-	atoiC, errC := strconv.Atoi(coreRelID)
-	atoiT, errT := strconv.Atoi(targetRelID)
+// CreateRobboUnitRel is the resolver for the CreateRobboUnitRel field.
+func (r *mutationResolver) CreateRobboUnitRel(ctx context.Context, coreRelID string, targetRelID string) (*models.Response, error) {
+	unitAdminId, errC := strconv.Atoi(coreRelID)
+	robboUnitId, errT := strconv.Atoi(targetRelID)
 	if errC != nil {
 		r.loggers.Err.Printf("%s", errC.Error())
 		return nil, &gqlerror.Error{
@@ -41,7 +41,7 @@ func (r *mutationResolver) CreateParentRel(ctx context.Context, coreRelID string
 			},
 		}
 	}
-	_, err := r.parentRelService.CreateRel(uint(atoiC), uint(atoiT))
+	_, err := r.robboUnitRelService.CreateRel(uint(unitAdminId), uint(robboUnitId))
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{
@@ -53,12 +53,12 @@ func (r *mutationResolver) CreateParentRel(ctx context.Context, coreRelID string
 	return &models.Response{Ok: true}, nil
 }
 
-// DeleteParentRel is the resolver for the DeleteParentRel field.
-func (r *mutationResolver) DeleteParentRel(ctx context.Context, parentID string, childID string) (*models.Response, error) {
-	atoiP, errP := strconv.Atoi(parentID)
-	atoiC, errC := strconv.Atoi(childID)
-	if errP != nil {
-		r.loggers.Err.Printf("%s", errP.Error())
+// DeleteRobboUnitRel is the resolver for the DeleteRobboUnitRel field.
+func (r *mutationResolver) DeleteRobboUnitRel(ctx context.Context, unitAdminID string, robboUnitID string) (*models.Response, error) {
+	atoiU, errU := strconv.Atoi(unitAdminID)
+	atoiR, errR := strconv.Atoi(robboUnitID)
+	if errU != nil {
+		r.loggers.Err.Printf("%s", errU.Error())
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{
 				"err": utils.ResponseError{
@@ -68,8 +68,8 @@ func (r *mutationResolver) DeleteParentRel(ctx context.Context, parentID string,
 			},
 		}
 	}
-	if errC != nil {
-		r.loggers.Err.Printf("%s", errC.Error())
+	if errR != nil {
+		r.loggers.Err.Printf("%s", errR.Error())
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{
 				"err": utils.ResponseError{
@@ -79,7 +79,7 @@ func (r *mutationResolver) DeleteParentRel(ctx context.Context, parentID string,
 			},
 		}
 	}
-	if err := r.parentRelService.DeleteRel(uint(atoiP), uint(atoiC)); err != nil {
+	if err := r.robboUnitRelService.DeleteRel(uint(atoiU), uint(atoiR)); err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{
@@ -91,9 +91,9 @@ func (r *mutationResolver) DeleteParentRel(ctx context.Context, parentID string,
 	}
 }
 
-// GetChildrenByParent is the resolver for the GetChildrenByParent field.
-func (r *queryResolver) GetChildrenByParent(ctx context.Context, parentID string) (*models.UsersList, error) {
-	atoi, err := strconv.Atoi(parentID)
+// GetUnitAdminByRobboUnitID is the resolver for the GetUnitAdminByRobboUnitId field.
+func (r *queryResolver) GetUnitAdminByRobboUnitID(ctx context.Context, robboUnitID string) (*models.UsersList, error) {
+	atoi, err := strconv.Atoi(robboUnitID)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{
@@ -105,7 +105,7 @@ func (r *queryResolver) GetChildrenByParent(ctx context.Context, parentID string
 			},
 		}
 	}
-	children, err := r.parentRelService.GetChildrenByParentId(uint(atoi))
+	unitAdmins, err := r.robboUnitRelService.GetUnitAdminsByRobboUnitId(uint(atoi))
 	if err != nil {
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{
@@ -114,14 +114,14 @@ func (r *queryResolver) GetChildrenByParent(ctx context.Context, parentID string
 		}
 	}
 	return &models.UsersList{
-		Users:     models.FromUsersCore(children),
-		CountRows: len(children),
+		Users:     models.FromUsersCore(unitAdmins),
+		CountRows: len(unitAdmins),
 	}, nil
 }
 
-// GetParentsByChild is the resolver for the GetParentsByChild field.
-func (r *queryResolver) GetParentsByChild(ctx context.Context, childID string) (*models.UsersList, error) {
-	atoi, err := strconv.Atoi(childID)
+// GetRobboUnitsByUnitAdmin is the resolver for the GetRobboUnitsByUnitAdmin field.
+func (r *queryResolver) GetRobboUnitsByUnitAdmin(ctx context.Context, unitAdminID string) (*models.RobboUnitHTTPList, error) {
+	atoi, err := strconv.Atoi(unitAdminID)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{
@@ -133,7 +133,7 @@ func (r *queryResolver) GetParentsByChild(ctx context.Context, childID string) (
 			},
 		}
 	}
-	parents, err := r.parentRelService.GetParentsByChildId(uint(atoi))
+	robboUnits, err := r.robboUnitRelService.GetRobboUnitsByUnitAdmin(uint(atoi))
 	if err != nil {
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{
@@ -141,8 +141,8 @@ func (r *queryResolver) GetParentsByChild(ctx context.Context, childID string) (
 			},
 		}
 	}
-	return &models.UsersList{
-		Users:     models.FromUsersCore(parents),
-		CountRows: len(parents),
+	return &models.RobboUnitHTTPList{
+		RobboUnits: models.FromRobboUnitsCore(robboUnits),
+		CountRows:  len(robboUnits),
 	}, nil
 }

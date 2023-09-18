@@ -22,12 +22,19 @@ func Auth(next http.Handler, errLogger *log.Logger) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
+		// headerParts should be = ["Bearer", "<accessToken>"]
 		headerParts := strings.Split(authHeader, " ")
 		if len(headerParts) != 2 {
 			errLogger.Printf("%s", "invalid authorization header format")
 			http.Error(w, "invalid authorization header format", http.StatusBadRequest)
 			return
 		}
+		if headerParts[0] != "Bearer" {
+			errLogger.Printf("%s", "invalid authorization header format")
+			http.Error(w, "invalid authorization header format", http.StatusBadRequest)
+			return
+		}
+
 		data, err := jwt.ParseWithClaims(headerParts[1], &services.UserClaims{},
 			func(token *jwt.Token) (interface{}, error) {
 				return []byte(viper.GetString("auth_access_signing_key")), nil

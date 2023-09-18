@@ -33,10 +33,7 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input models.NewUser)
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{
-				"err": utils.ResponseError{
-					Code:    http.StatusInternalServerError,
-					Message: err.Error(),
-				},
+				"err": err,
 			},
 		}
 	}
@@ -73,10 +70,7 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, input models.UpdateUs
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{
-				"err": utils.ResponseError{
-					Code:    http.StatusInternalServerError,
-					Message: err.Error(),
-				},
+				"err": err,
 			},
 		}
 	}
@@ -104,10 +98,7 @@ func (r *mutationResolver) DeleteUser(ctx context.Context, id string) (*models.R
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{
-				"err": utils.ResponseError{
-					Code:    http.StatusInternalServerError,
-					Message: err.Error(),
-				},
+				"err": err,
 			},
 		}
 	}
@@ -132,14 +123,28 @@ func (r *mutationResolver) SetUserIsActive(ctx context.Context, id string, isAct
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{
-				"err": utils.ResponseError{
-					Code:    http.StatusInternalServerError,
-					Message: err.Error(),
-				},
+				"err": err,
 			},
 		}
 	}
 	return &models.Response{Ok: true}, nil
+}
+
+// SearchUsersByEmail is the resolver for the SearchUsersByEmail field.
+func (r *mutationResolver) SearchUsersByEmail(ctx context.Context, page *int, pageSize *int, email string, roles []models.Role) (*models.UsersList, error) {
+	users, countRows, err := r.userService.GetUsersByEmail(page, pageSize, roles, email, ctx.Value(consts.KeyRole).(models.Role))
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return &models.UsersList{}, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
+	}
+	return &models.UsersList{
+		Users:     models.FromUsersCore(users),
+		CountRows: int(countRows),
+	}, nil
 }
 
 // GetUserByAccessToken is the resolver for the GetUserByAccessToken field.
@@ -149,10 +154,7 @@ func (r *queryResolver) GetUserByAccessToken(ctx context.Context) (*models.UserH
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{
-				"err": utils.ResponseError{
-					Code:    http.StatusInternalServerError,
-					Message: err.Error(),
-				},
+				"err": err,
 			},
 		}
 	}
@@ -180,10 +182,7 @@ func (r *queryResolver) GetUserByID(ctx context.Context, id string) (*models.Use
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{
 			Extensions: map[string]interface{}{
-				"err": utils.ResponseError{
-					Code:    http.StatusInternalServerError,
-					Message: err.Error(),
-				},
+				"err": err,
 			},
 		}
 	}
@@ -194,21 +193,76 @@ func (r *queryResolver) GetUserByID(ctx context.Context, id string) (*models.Use
 
 // GetAllUsers is the resolver for the GetAllUsers field.
 func (r *queryResolver) GetAllUsers(ctx context.Context, page *int, pageSize *int, active bool, roles []models.Role) (*models.UsersList, error) {
-	users, countRows, err := r.userService.GetAllUsers(page, pageSize, active, roles, ctx.Value(consts.KeyRole).(models.Role))
+	clientId := ctx.Value(consts.KeyId).(uint)
+	clientRole := ctx.Value(consts.KeyRole).(models.Role)
+	users, countRows, err := r.userService.GetAllUsers(page, pageSize, active, roles, clientId, clientRole)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
 		return &models.UsersList{}, &gqlerror.Error{
 			Extensions: map[string]interface{}{
-				"err": utils.ResponseError{
-					Code:    http.StatusInternalServerError,
-					Message: err.Error(),
-				},
+				"err": err,
 			},
 		}
 	}
 	return &models.UsersList{
 		Users:     models.FromUsersCore(users),
 		CountRows: int(countRows),
+	}, nil
+}
+
+// GetStudentsByRobboUnitID is the resolver for the GetStudentsByRobboUnitId field.
+func (r *queryResolver) GetStudentsByRobboUnitID(ctx context.Context, robboUnitID string) (*models.UsersList, error) {
+	atoi, err := strconv.Atoi(robboUnitID)
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusBadRequest,
+					Message: consts.ErrAtoi,
+				},
+			},
+		}
+	}
+	students, err := r.robboUnitRelService.GetStudentsByRobboUnitId(uint(atoi))
+	if err != nil {
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
+	}
+	return &models.UsersList{
+		Users:     models.FromUsersCore(students),
+		CountRows: len(students),
+	}, nil
+}
+
+// GetStudentsByTeacherID is the resolver for the GetStudentsByTeacherId field.
+func (r *queryResolver) GetStudentsByTeacherID(ctx context.Context, teacherID string) (*models.UsersList, error) {
+	atoi, err := strconv.Atoi(teacherID)
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusBadRequest,
+					Message: consts.ErrAtoi,
+				},
+			},
+		}
+	}
+	students, err := r.userService.GetStudentsByTeacherId(uint(atoi))
+	if err != nil {
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
+	}
+	return &models.UsersList{
+		Users:     models.FromUsersCore(students),
+		CountRows: len(students),
 	}, nil
 }
 
