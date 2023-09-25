@@ -113,6 +113,30 @@ func (r *mutationResolver) DeleteChat(ctx context.Context, chatID string) (*mode
 	return &models.Response{Ok: true}, nil
 }
 
+// GetChatByID is the resolver for the GetChatById field.
+func (r *queryResolver) GetChatByID(ctx context.Context, chatID string) (*models.ChatHTTP, error) {
+	id, err := strconv.Atoi(chatID)
+
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusBadRequest,
+					Message: consts.ErrAtoi,
+				},
+			},
+		}
+	}
+
+	chat, err := r.chatService.GetChatById(uint(id))
+
+	var chatHttp models.ChatHTTP
+	chatHttp.FromCore(chat)
+
+	return &chatHttp, nil
+}
+
 // GetChats is the resolver for the GetChats field.
 func (r *queryResolver) GetChats(ctx context.Context, page *int, pageSize *int) (*models.ChatsList, error) {
 	userID := ctx.Value(consts.KeyId).(uint)

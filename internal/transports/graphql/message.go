@@ -6,9 +6,9 @@ package resolvers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/skinnykaen/rpa_clone/graph"
 	"github.com/skinnykaen/rpa_clone/internal/consts"
@@ -160,7 +160,7 @@ func (r *mutationResolver) DeleteMessage(ctx context.Context, id string) (*model
 			ID:       id,
 			Payload:  "",
 			ChatID:   "0",
-			SentAt:   time.Time{},
+			SentAt:   "",
 			Sender:   &models.UserHTTP{ID: strconv.Itoa(int(ctx.Value(consts.KeyId).(uint)))},
 			Receiver: &models.UserHTTP{ID: strconv.Itoa(int(receiverID))},
 		}); err != nil {
@@ -179,7 +179,7 @@ func (r *mutationResolver) DeleteMessage(ctx context.Context, id string) (*model
 
 // MessagesFromUser is the resolver for the MessagesFromUser field.
 func (r *queryResolver) MessagesFromUser(ctx context.Context, input models.MessagesFromUserInput, count *int, cursor *string) (*models.MessageConnection, error) {
-	reseiverID, err := strconv.Atoi(input.ReceiverID)
+	receiverID, err := strconv.Atoi(input.ReceiverID)
 
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
@@ -207,7 +207,7 @@ func (r *queryResolver) MessagesFromUser(ctx context.Context, input models.Messa
 		}
 	}
 
-	messagesFromUser, from, to, err := r.messageService.MessagesFromUser(uint(reseiverID), uint(senderID), count, cursor,
+	messagesFromUser, from, to, err := r.messageService.MessagesFromUser(uint(receiverID), uint(senderID), count, cursor,
 		ctx.Value(consts.KeyId).(uint))
 
 	if err != nil {
@@ -219,16 +219,45 @@ func (r *queryResolver) MessagesFromUser(ctx context.Context, input models.Messa
 		}
 	}
 
-	res := make([]*models.MessageHTTP, len(messagesFromUser))
-
-	for i, message := range messagesFromUser {
-		var mes models.MessageHTTP
-		mes.FromCore(message)
-		res[i] = &mes
-	}
+	messagesHttp := models.FromMessagesCore(messagesFromUser)
 
 	return &models.MessageConnection{
-		Messages: res,
+		Messages: messagesHttp,
+		From:     from,
+		To:       to,
+	}, nil
+}
+
+// GetMessagesByChatID is the resolver for the GetMessagesByChatId field.
+func (r *queryResolver) GetMessagesByChatID(ctx context.Context, chatID string, count *int, cursor *string) (*models.MessageConnection, error) {
+	atoi, err := strconv.Atoi(chatID)
+
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusBadRequest,
+					Message: consts.ErrAtoi,
+				},
+			},
+		}
+	}
+
+	messagesCore, from, to, err := r.messageService.GetMessagesByChatId(uint(atoi), count, cursor)
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return nil, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
+	}
+
+	messagesHttp := models.FromMessagesCore(messagesCore)
+
+	return &models.MessageConnection{
+		Messages: messagesHttp,
 		From:     from,
 		To:       to,
 	}, nil
@@ -237,6 +266,7 @@ func (r *queryResolver) MessagesFromUser(ctx context.Context, input models.Messa
 // MessageSubscription is the resolver for the MessageSubscription field.
 func (r *subscriptionResolver) MessageSubscription(ctx context.Context, mode *models.MessageMode) (<-chan *models.MessageForSubscription, error) {
 	userID := ctx.Value(consts.KeyId).(uint)
+	fmt.Println(userID)
 
 	channel, err := r.messageObservers.CreateObserver(userID, mode)
 

@@ -20,6 +20,7 @@ type ChatForSubscription{
 }
 
 extend type Query {
+    GetChatById(chatId: ID!): ChatHttp!  @hasRole(roles:[SuperAdmin, UnitAdmin, Teacher, Parent, Student])
     GetChats(page: Int, pageSize: Int): ChatsList! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
 }
 

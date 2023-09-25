@@ -53,8 +53,10 @@ func (m *MessageHTTP) FromCore(messageCore MessageCore) {
 	sender.FromCore(messageCore.Sender)
 	m.Sender = &sender
 
-	m.SentAt = messageCore.CreatedAt
-	m.UpdatedAt = &messageCore.UpdatedAt
+	m.SentAt = messageCore.CreatedAt.Format(time.DateTime)
+
+	updatedAt := messageCore.UpdatedAt.Format(time.DateTime)
+	m.UpdatedAt = &updatedAt
 }
 
 type MessageConnection struct {
@@ -77,4 +79,13 @@ func (u *MessageConnection) PageInfo() PageInfo {
 
 func EncodeCursor(i int) string {
 	return base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("cursor%d", i+1)))
+}
+
+func FromMessagesCore(messagesCore []MessageCore) (messagesHttp []*MessageHTTP) {
+	for _, messageCore := range messagesCore {
+		var tmpMessageHttp MessageHTTP
+		tmpMessageHttp.FromCore(messageCore)
+		messagesHttp = append(messagesHttp, &tmpMessageHttp)
+	}
+	return messagesHttp
 }

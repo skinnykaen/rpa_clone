@@ -15,11 +15,26 @@ type MessageGateway interface {
 
 	MessagesFromUser(receiverId, senderId uint) ([]models.MessageCore, error)
 
-	GetMessageByID(messageID uint) (models.MessageCore, error)
+	GetMessageById(messageId uint) (models.MessageCore, error)
+	GetMessagesByChatId(chatId uint) ([]models.MessageCore, error)
 }
 
 type MessageGatewayImpl struct {
 	postgresClient db.PostgresClient
+}
+
+func (m MessageGatewayImpl) GetMessagesByChatId(chatId uint) ([]models.MessageCore, error) {
+	var messages []models.MessageCore
+
+	if err := m.postgresClient.Db.Preload("Receiver").Preload("Sender").
+		Where("chat_id = ?", chatId).Find(&messages).Error; err != nil {
+		return nil, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
+	}
+
+	return messages, nil
 }
 
 func (m MessageGatewayImpl) PostMessage(message models.MessageCore) (models.MessageCore, error) {
@@ -83,6 +98,7 @@ func (m MessageGatewayImpl) MessagesFromUser(receiverId, senderId uint) ([]model
 
 	if err := m.postgresClient.Db.Preload("Receiver").Preload("Sender").
 		Where("sender_id = ? AND receiver_id = ?", senderId, receiverId).
+		//Or("sender_id = ? AND receiver_id = ?", receiverId, senderId).
 		Order("id desc").Find(&messagesFromUser).Error; err != nil {
 		return nil, utils.ResponseError{
 			Code:    http.StatusInternalServerError,
@@ -93,10 +109,10 @@ func (m MessageGatewayImpl) MessagesFromUser(receiverId, senderId uint) ([]model
 	return messagesFromUser, nil
 }
 
-func (m MessageGatewayImpl) GetMessageByID(messageID uint) (models.MessageCore, error) {
+func (m MessageGatewayImpl) GetMessageById(messageId uint) (models.MessageCore, error) {
 	var message models.MessageCore
 
-	if err := m.postgresClient.Db.First(&message, messageID).Error; err != nil {
+	if err := m.postgresClient.Db.First(&message, messageId).Error; err != nil {
 		return models.MessageCore{}, utils.ResponseError{
 			Code:    http.StatusInternalServerError,
 			Message: err.Error(),

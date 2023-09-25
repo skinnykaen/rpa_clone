@@ -17,12 +17,7 @@ type MessageService interface {
 	UpdateMessage(id uint, payload string, userID uint) (models.MessageCore, error)
 
 	MessagesFromUser(receiverId, senderId uint, count *int, cursor *string, userID uint) ([]models.MessageCore, int, int, error)
-}
-
-type MessageServiceImpl struct {
-	messageGateway gateways.MessageGateway
-	getterUserByID GetterUserByID
-	getterChat     ChatCreator
+	GetMessagesByChatId(chatId uint, count *int, cursor *string) ([]models.MessageCore, int, int, error)
 }
 
 type GetterUserByID interface {
@@ -31,6 +26,48 @@ type GetterUserByID interface {
 
 type ChatCreator interface {
 	CreateChat(user1ID, user2ID uint) (models.ChatCore, error)
+}
+
+type MessageServiceImpl struct {
+	messageGateway gateways.MessageGateway
+	getterUserByID GetterUserByID
+	getterChat     ChatCreator
+}
+
+func (m MessageServiceImpl) GetMessagesByChatId(chatId uint, count *int, cursor *string) ([]models.MessageCore, int, int, error) {
+	from := 0
+
+	if cursor != nil {
+		b, err := base64.StdEncoding.DecodeString(*cursor)
+
+		if err != nil {
+			return nil, 0, 0, err
+		}
+
+		i, err := strconv.Atoi(strings.TrimPrefix(string(b), "cursor"))
+
+		if err != nil {
+			return nil, 0, 0, err
+		}
+
+		from = i
+	}
+
+	messages, err := m.messageGateway.GetMessagesByChatId(chatId)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	to := len(messages)
+	if count != nil {
+		to = from + *count
+
+		if to > len(messages) {
+			to = len(messages)
+		}
+	}
+
+	return messages, from, to, nil
 }
 
 func (m MessageServiceImpl) PostMessage(message models.MessageCore, clientRole models.Role) (models.MessageCore, error) {
@@ -67,7 +104,7 @@ func (m MessageServiceImpl) PostMessage(message models.MessageCore, clientRole m
 }
 
 func (m MessageServiceImpl) DeleteMessage(id, userID uint) (receiverID uint, err error) {
-	message, err := m.messageGateway.GetMessageByID(id)
+	message, err := m.messageGateway.GetMessageById(id)
 
 	if err != nil {
 		return 0, utils.ResponseError{
@@ -87,7 +124,7 @@ func (m MessageServiceImpl) DeleteMessage(id, userID uint) (receiverID uint, err
 }
 
 func (m MessageServiceImpl) UpdateMessage(id uint, payload string, userID uint) (models.MessageCore, error) {
-	message, err := m.messageGateway.GetMessageByID(id)
+	message, err := m.messageGateway.GetMessageById(id)
 
 	if err != nil {
 		return models.MessageCore{}, utils.ResponseError{
@@ -154,11 +191,11 @@ func (m MessageServiceImpl) MessagesFromUser(receiverId, senderId uint, count *i
 func CheckAccessForMessaging(senderRole, receiverRole models.Role) error {
 
 	var messagingPermissions = map[models.Role][]models.Role{
-		models.RoleAnonymous:  []models.Role{},
-		models.RoleStudent:    []models.Role{models.RoleStudent, models.RoleParent, models.RoleTeacher},
-		models.RoleParent:     []models.Role{models.RoleStudent, models.RoleTeacher, models.RoleUnitAdmin},
-		models.RoleTeacher:    []models.Role{models.RoleStudent, models.RoleParent, models.RoleTeacher, models.RoleUnitAdmin},
-		models.RoleUnitAdmin:  []models.Role{models.RoleParent, models.RoleTeacher, models.RoleUnitAdmin},
+		models.RoleAnonymous:  {},
+		models.RoleStudent:    {models.RoleStudent, models.RoleParent, models.RoleTeacher, models.RoleSuperAdmin},
+		models.RoleParent:     {models.RoleStudent, models.RoleTeacher, models.RoleUnitAdmin, models.RoleSuperAdmin},
+		models.RoleTeacher:    {models.RoleStudent, models.RoleParent, models.RoleTeacher, models.RoleUnitAdmin, models.RoleSuperAdmin},
+		models.RoleUnitAdmin:  {models.RoleParent, models.RoleTeacher, models.RoleUnitAdmin, models.RoleSuperAdmin},
 		models.RoleSuperAdmin: models.AllRole,
 	}
 
