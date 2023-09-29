@@ -2,6 +2,7 @@ type ChatHttp {
     id: ID!
     user1: UserHttp!
     user2: UserHttp!
+    lastMessage: MessageHttp
 }
 
 type ChatsList{

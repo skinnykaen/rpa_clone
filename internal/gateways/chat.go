@@ -95,7 +95,10 @@ func (c ChatGatewayImpl) DeleteChat(chatID uint) (models.ChatCore, error) {
 func (c ChatGatewayImpl) Chats(userID uint, offset, limit int) ([]models.ChatCore, uint, error) {
 	var chats []models.ChatCore
 
-	result := c.postgresClient.Db.Preload("User1").Preload("User2").
+	result := c.postgresClient.Db.
+		Select("chat_cores.*, (SELECT max(id) FROM message_cores WHERE chat_id = chat_cores.id AND deleted_at IS NULL) as last_message_id ").
+		Preload("User1").Preload("User2").Preload("LastMessage").
+		Preload("LastMessage.Receiver").Preload("LastMessage.Sender").
 		Limit(limit).Offset(offset).
 		Where("user1_id = ? OR user2_id = ?", userID, userID).Find(&chats)
 

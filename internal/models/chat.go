@@ -7,15 +7,16 @@ import (
 )
 
 type ChatCore struct {
-	ID        uint `gorm:"primaryKey"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt gorm.DeletedAt `gorm:"index"`
-	Messages  []MessageCore  `gorm:"foreignKey:ChatID; constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	User1     UserCore
-	User2     UserCore
-	User1ID   uint `gorm:"index:,unique,composite:idx_users_in_chat"`
-	User2ID   uint `gorm:"index:,unique,composite:idx_users_in_chat"`
+	ID          uint `gorm:"primaryKey"`
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   gorm.DeletedAt `gorm:"index"`
+	Messages    []MessageCore  `gorm:"foreignKey:ChatID; constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	User1       UserCore
+	User2       UserCore
+	User1ID     uint         `gorm:"index:,unique,composite:idx_users_in_chat"`
+	User2ID     uint         `gorm:"index:,unique,composite:idx_users_in_chat"`
+	LastMessage *MessageCore `gorm:"foreignKey:ChatID; constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
 func (c *ChatHTTP) ToCore() ChatCore {
@@ -42,4 +43,10 @@ func (c *ChatHTTP) FromCore(chatCore ChatCore) {
 	var user2 UserHTTP
 	user2.FromCore(chatCore.User2)
 	c.User2 = &user2
+
+	if chatCore.LastMessage != nil {
+		var lastMessage MessageHTTP
+		lastMessage.FromCore(*chatCore.LastMessage)
+		c.LastMessage = &lastMessage
+	}
 }

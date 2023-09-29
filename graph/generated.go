@@ -61,9 +61,10 @@ type ComplexityRoot struct {
 	}
 
 	ChatHttp struct {
-		ID    func(childComplexity int) int
-		User1 func(childComplexity int) int
-		User2 func(childComplexity int) int
+		ID          func(childComplexity int) int
+		LastMessage func(childComplexity int) int
+		User1       func(childComplexity int) int
+		User2       func(childComplexity int) int
 	}
 
 	ChatsList struct {
@@ -445,6 +446,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.ChatHttp.ID(childComplexity), true
+
+	case "ChatHttp.lastMessage":
+		if e.complexity.ChatHttp.LastMessage == nil {
+			break
+		}
+
+		return e.complexity.ChatHttp.LastMessage(childComplexity), true
 
 	case "ChatHttp.user1":
 		if e.complexity.ChatHttp.User1 == nil {
@@ -3457,6 +3465,8 @@ func (ec *executionContext) fieldContext_ChatForSubscription_chatHttp(ctx contex
 				return ec.fieldContext_ChatHttp_user1(ctx, field)
 			case "user2":
 				return ec.fieldContext_ChatHttp_user2(ctx, field)
+			case "lastMessage":
+				return ec.fieldContext_ChatHttp_lastMessage(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ChatHttp", field.Name)
 		},
@@ -3692,6 +3702,63 @@ func (ec *executionContext) fieldContext_ChatHttp_user2(ctx context.Context, fie
 	return fc, nil
 }
 
+func (ec *executionContext) _ChatHttp_lastMessage(ctx context.Context, field graphql.CollectedField, obj *models.ChatHTTP) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ChatHttp_lastMessage(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LastMessage, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*models.MessageHTTP)
+	fc.Result = res
+	return ec.marshalOMessageHttp2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐMessageHTTP(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ChatHttp_lastMessage(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ChatHttp",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_MessageHttp_id(ctx, field)
+			case "payload":
+				return ec.fieldContext_MessageHttp_payload(ctx, field)
+			case "receiver":
+				return ec.fieldContext_MessageHttp_receiver(ctx, field)
+			case "sender":
+				return ec.fieldContext_MessageHttp_sender(ctx, field)
+			case "chatId":
+				return ec.fieldContext_MessageHttp_chatId(ctx, field)
+			case "sentAt":
+				return ec.fieldContext_MessageHttp_sentAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_MessageHttp_updatedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type MessageHttp", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ChatsList_chats(ctx context.Context, field graphql.CollectedField, obj *models.ChatsList) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ChatsList_chats(ctx, field)
 	if err != nil {
@@ -3737,6 +3804,8 @@ func (ec *executionContext) fieldContext_ChatsList_chats(ctx context.Context, fi
 				return ec.fieldContext_ChatHttp_user1(ctx, field)
 			case "user2":
 				return ec.fieldContext_ChatHttp_user2(ctx, field)
+			case "lastMessage":
+				return ec.fieldContext_ChatHttp_lastMessage(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ChatHttp", field.Name)
 		},
@@ -6837,6 +6906,8 @@ func (ec *executionContext) fieldContext_Mutation_CreateChat(ctx context.Context
 				return ec.fieldContext_ChatHttp_user1(ctx, field)
 			case "user2":
 				return ec.fieldContext_ChatHttp_user2(ctx, field)
+			case "lastMessage":
+				return ec.fieldContext_ChatHttp_lastMessage(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ChatHttp", field.Name)
 		},
@@ -16561,6 +16632,8 @@ func (ec *executionContext) _ChatHttp(ctx context.Context, sel ast.SelectionSet,
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "lastMessage":
+			out.Values[i] = ec._ChatHttp_lastMessage(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

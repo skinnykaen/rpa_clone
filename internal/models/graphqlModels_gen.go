@@ -20,9 +20,10 @@ type ChatForSubscription struct {
 }
 
 type ChatHTTP struct {
-	ID    string    `json:"id"`
-	User1 *UserHTTP `json:"user1"`
-	User2 *UserHTTP `json:"user2"`
+	ID          string       `json:"id"`
+	User1       *UserHTTP    `json:"user1"`
+	User2       *UserHTTP    `json:"user2"`
+	LastMessage *MessageHTTP `json:"lastMessage,omitempty"`
 }
 
 type ChatsList struct {
