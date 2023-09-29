@@ -1,0 +1,63 @@
+type MessageHttp {
+    id: ID!
+    payload: String!
+    receiver: UserHttp!
+    sender: UserHttp!
+    chatId: ID!
+    sentAt: Timestamp!
+    updatedAt: Timestamp
+}
+
+input MessagesFromUserInput{
+    receiverId:ID!
+    senderId:ID!
+}
+
+type MessageEdge {
+    node: MessageHttp
+    cursor: ID!
+}
+
+type MessageConnection {
+    edges: [MessageEdge]
+    pageInfo: PageInfo!
+    totalCount: Int
+}
+
+type PageInfo {
+    startCursor: ID!
+    endCursor: ID!
+    hasNextPage: Boolean!
+}
+
+input NewMessage{
+    payload: String!
+    receiverId: ID!
+}
+
+enum MessageMode{
+    Create
+    Delete
+    Update
+}
+
+type MessageForSubscription{
+    messageHttp:MessageHttp!
+    messageMode:MessageMode!
+}
+
+extend type Query {
+    MessagesFromUser(input:MessagesFromUserInput!, count: Int, cursor:ID): MessageConnection! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
+    GetMessagesByChatId(chatId: ID!, count: Int, cursor:ID): MessageConnection! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
+}
+
+extend type Mutation {
+    PostMessage(input:NewMessage!): MessageHttp! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
+    UpdateMessage(id:ID!, payload: String!): MessageHttp!
+    DeleteMessage(id:ID!):Response! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
+}
+
+extend type Subscription {
+    MessageSubscription(mode:MessageMode): MessageForSubscription!
+}
+

@@ -14,6 +14,23 @@ type AbsoluteMediaHTTP struct {
 	URIAbsolute string `json:"uri_absolute"`
 }
 
+type ChatForSubscription struct {
+	ChatHTTP *ChatHTTP `json:"chatHttp"`
+	ChatMode ChatMode  `json:"chatMode"`
+}
+
+type ChatHTTP struct {
+	ID          string       `json:"id"`
+	User1       *UserHTTP    `json:"user1"`
+	User2       *UserHTTP    `json:"user2"`
+	LastMessage *MessageHTTP `json:"lastMessage,omitempty"`
+}
+
+type ChatsList struct {
+	Chats     []*ChatHTTP `json:"chats"`
+	CountRows int         `json:"countRows"`
+}
+
 type CourseAPIMediaCollectionHTTP struct {
 	ID          string             `json:"id"`
 	BannerImage *AbsoluteMediaHTTP `json:"banner_image,omitempty"`
@@ -46,8 +63,9 @@ type CourseHTTP struct {
 }
 
 type CoursesListHTTP struct {
-	Courses   []*CourseHTTP `json:"courses"`
-	CountRows int           `json:"countRows"`
+	Results    []*CourseHTTP `json:"results"`
+	Pagination *Pagination   `json:"pagination"`
+	CountRows  int           `json:"countRows"`
 }
 
 type ImageHTTP struct {
@@ -60,6 +78,46 @@ type ImageHTTP struct {
 type MediaHTTP struct {
 	ID  string `json:"id"`
 	URI string `json:"uri"`
+}
+
+type MessageEdge struct {
+	Node   *MessageHTTP `json:"node,omitempty"`
+	Cursor string       `json:"cursor"`
+}
+
+type MessageForSubscription struct {
+	MessageHTTP *MessageHTTP `json:"messageHttp"`
+	MessageMode MessageMode  `json:"messageMode"`
+}
+
+type MessageHTTP struct {
+	ID        string    `json:"id"`
+	Payload   string    `json:"payload"`
+	Receiver  *UserHTTP `json:"receiver"`
+	Sender    *UserHTTP `json:"sender"`
+	ChatID    string    `json:"chatId"`
+	SentAt    string    `json:"sentAt"`
+	UpdatedAt *string   `json:"updatedAt,omitempty"`
+}
+
+type MessagesFromUserInput struct {
+	ReceiverID string `json:"receiverId"`
+	SenderID   string `json:"senderId"`
+}
+
+type NewMessage struct {
+	Payload    string `json:"payload"`
+	ReceiverID string `json:"receiverId"`
+}
+
+type NewRobboGroup struct {
+	Name        string `json:"name"`
+	RobboUnitID string `json:"robboUnitId"`
+}
+
+type NewRobboUnit struct {
+	Name string `json:"name"`
+	City string `json:"city"`
 }
 
 type NewUser struct {
@@ -79,6 +137,19 @@ type NewUserResponse struct {
 	Firstname  string `json:"firstname"`
 	Lastname   string `json:"lastname"`
 	Middlename string `json:"middlename"`
+}
+
+type PageInfo struct {
+	StartCursor string `json:"startCursor"`
+	EndCursor   string `json:"endCursor"`
+	HasNextPage bool   `json:"hasNextPage"`
+}
+
+type Pagination struct {
+	Next     string `json:"next"`
+	Previous string `json:"previous"`
+	Count    int    `json:"count"`
+	NumPages int    `json:"num_pages"`
 }
 
 type ProjectPageHTTP struct {
@@ -103,6 +174,32 @@ type ProjectPageHTTPList struct {
 
 type Response struct {
 	Ok bool `json:"ok"`
+}
+
+type RobboGroupHTTP struct {
+	ID        string         `json:"id"`
+	CreatedAt string         `json:"createdAt"`
+	UpdatedAt string         `json:"updatedAt"`
+	Name      string         `json:"name"`
+	RobboUnit *RobboUnitHTTP `json:"robboUnit"`
+}
+
+type RobboGroupHTTPList struct {
+	RobboGroups []*RobboGroupHTTP `json:"robboGroups"`
+	CountRows   int               `json:"countRows"`
+}
+
+type RobboUnitHTTP struct {
+	ID        string `json:"id"`
+	CreatedAt string `json:"createdAt"`
+	UpdatedAt string `json:"updatedAt"`
+	Name      string `json:"name"`
+	City      string `json:"city"`
+}
+
+type RobboUnitHTTPList struct {
+	RobboUnits []*RobboUnitHTTP `json:"robboUnits"`
+	CountRows  int              `json:"countRows"`
 }
 
 type Settings struct {
@@ -136,6 +233,17 @@ type UpdateProjectPage struct {
 	IsShared    bool   `json:"isShared"`
 }
 
+type UpdateRobboGroup struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type UpdateRobboUnit struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	City string `json:"city"`
+}
+
 type UpdateUser struct {
 	ID         string `json:"id"`
 	Email      string `json:"email"`
@@ -163,6 +271,90 @@ type UserHTTP struct {
 type UsersList struct {
 	Users     []*UserHTTP `json:"users"`
 	CountRows int         `json:"countRows"`
+}
+
+type ChatMode string
+
+const (
+	ChatModeCreate ChatMode = "Create"
+	ChatModeDelete ChatMode = "Delete"
+)
+
+var AllChatMode = []ChatMode{
+	ChatModeCreate,
+	ChatModeDelete,
+}
+
+func (e ChatMode) IsValid() bool {
+	switch e {
+	case ChatModeCreate, ChatModeDelete:
+		return true
+	}
+	return false
+}
+
+func (e ChatMode) String() string {
+	return string(e)
+}
+
+func (e *ChatMode) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ChatMode(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ChatMode", str)
+	}
+	return nil
+}
+
+func (e ChatMode) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type MessageMode string
+
+const (
+	MessageModeCreate MessageMode = "Create"
+	MessageModeDelete MessageMode = "Delete"
+	MessageModeUpdate MessageMode = "Update"
+)
+
+var AllMessageMode = []MessageMode{
+	MessageModeCreate,
+	MessageModeDelete,
+	MessageModeUpdate,
+}
+
+func (e MessageMode) IsValid() bool {
+	switch e {
+	case MessageModeCreate, MessageModeDelete, MessageModeUpdate:
+		return true
+	}
+	return false
+}
+
+func (e MessageMode) String() string {
+	return string(e)
+}
+
+func (e *MessageMode) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = MessageMode(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid MessageMode", str)
+	}
+	return nil
+}
+
+func (e MessageMode) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
 type Role string

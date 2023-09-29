@@ -18,6 +18,7 @@ type UserGateway interface {
 	GetUserById(id uint) (user models.UserCore, err error)
 	GetUserByActivationLink(link string) (user models.UserCore, err error)
 	GetUserByEmail(email string) (user models.UserCore, err error)
+	GetUsersByEmail(offset, limit int, role []models.Role, email string) (users []models.UserCore, countRows uint, err error)
 	GetAllUsers(offset, limit int, isActive bool, role []models.Role) (users []models.UserCore, countRows uint, err error)
 	DoesExistEmail(id uint, email string) (bool, error)
 	SetIsActive(id uint, isActive bool) error
@@ -25,6 +26,28 @@ type UserGateway interface {
 
 type UserGatewayImpl struct {
 	postgresClient db.PostgresClient
+}
+
+func (u UserGatewayImpl) GetUsersByEmail(offset, limit int, role []models.Role, email string) (users []models.UserCore, countRows uint, err error) {
+	var count int64
+	if len(role) == 0 {
+		role = append(role,
+			models.RoleStudent,
+			models.RoleParent,
+			models.RoleTeacher,
+			models.RoleUnitAdmin,
+		)
+	}
+	result := u.postgresClient.Db.Limit(limit).Offset(offset).
+		Where("email LIKE ? AND (role) IN ?", email+"%", role).Find(&users)
+	if result.Error != nil {
+		return []models.UserCore{}, 0, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: result.Error.Error(),
+		}
+	}
+	result.Count(&count)
+	return users, uint(count), result.Error
 }
 
 func (u UserGatewayImpl) GetUserByActivationLink(link string) (user models.UserCore, err error) {
@@ -129,6 +152,7 @@ func (u UserGatewayImpl) GetAllUsers(
 	role []models.Role,
 ) (users []models.UserCore, countRows uint, err error) {
 	var count int64
+
 	if len(role) == 0 {
 		role = append(role,
 			models.RoleStudent,
@@ -137,14 +161,23 @@ func (u UserGatewayImpl) GetAllUsers(
 			models.RoleUnitAdmin,
 		)
 	}
-	result := u.postgresClient.Db.Limit(limit).Offset(offset).
-		Where("is_active = ? AND (role) IN ?", isActive, role).Find(&users)
-	if result.Error != nil {
+
+	if err := u.postgresClient.Db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Limit(limit).Offset(offset).
+			Where("is_active = ? AND (role) IN ?", isActive, role).Find(&users).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&models.UserCore{}).
+			Where("is_active = ? AND (role) IN ?", isActive, role).Count(&count).Error; err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
 		return []models.UserCore{}, 0, utils.ResponseError{
 			Code:    http.StatusInternalServerError,
-			Message: result.Error.Error(),
+			Message: err.Error(),
 		}
 	}
-	result.Count(&count)
-	return users, uint(count), result.Error
+
+	return users, uint(count), nil
 }

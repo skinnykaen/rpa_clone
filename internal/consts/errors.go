@@ -20,9 +20,23 @@ const (
 	ErrUserIsNotActive     = "user is not active. please check your email"
 	ErrProjectPageIsBanned = "the projectPage is banned. no access"
 	ErrAccessDenied        = "access denied"
+	ErrMessagingToYourself = "sending a message to yourself"
+	ErrChatWithYourself    = "creating chat with yourself"
+	ErrNotFoundAuthToken   = "authToken not found in transport payload"
+	ErrEmptyDataWithClaims = "empty data with claims"
+)
+
+// http code 500
+const (
+	ErrThereIsNoObservers = "there is no connection to the observer"
 )
 
 // ErrActivationLinkUnavailable have http code 503
 const (
 	ErrActivationLinkUnavailable = "activation link is currently unavailable"
+)
+
+// ErrIncorrectInputParam edx errors
+const (
+	ErrIncorrectInputParam = "error incorrect input params"
 )

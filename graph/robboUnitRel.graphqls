@@ -1,0 +1,9 @@
+extend type Query {
+	GetUnitAdminByRobboUnitId(robboUnitId: ID!): UsersList! @hasRole(roles:[SuperAdmin, Parent])
+	GetRobboUnitsByUnitAdmin(unitAdminId: ID!): RobboUnitHttpList! @hasRole(roles:[SuperAdmin, UnitAdmin])
+}
+
+extend type Mutation {
+	CreateRobboUnitRel(coreRelId: ID!, targetRelId: ID!): Response! @hasRole(roles:[SuperAdmin])
+	DeleteRobboUnitRel(unitAdminId: ID!, robboUnitId: ID!): Response! @hasRole(roles:[SuperAdmin])
+}
