@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/99designs/gqlgen v0.17.33
 	github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1
+	github.com/gorilla/websocket v1.5.0
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
 	github.com/rs/cors v1.9.0
 	github.com/spf13/viper v1.16.0
@@ -18,7 +19,6 @@ require (
 require (
 	github.com/agnivade/levenshtein v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
-	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.3 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect

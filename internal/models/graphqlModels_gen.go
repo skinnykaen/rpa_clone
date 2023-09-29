@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"strconv"
-	"time"
 )
 
 type AbsoluteMediaHTTP struct {
@@ -91,13 +90,13 @@ type MessageForSubscription struct {
 }
 
 type MessageHTTP struct {
-	ID        string     `json:"id"`
-	Payload   string     `json:"payload"`
-	Receiver  *UserHTTP  `json:"receiver"`
-	Sender    *UserHTTP  `json:"sender"`
-	ChatID    string     `json:"chatId"`
-	SentAt    time.Time  `json:"sentAt"`
-	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
+	ID        string    `json:"id"`
+	Payload   string    `json:"payload"`
+	Receiver  *UserHTTP `json:"receiver"`
+	Sender    *UserHTTP `json:"sender"`
+	ChatID    string    `json:"chatId"`
+	SentAt    string    `json:"sentAt"`
+	UpdatedAt *string   `json:"updatedAt,omitempty"`
 }
 
 type MessagesFromUserInput struct {

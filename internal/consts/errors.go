@@ -22,6 +22,8 @@ const (
 	ErrAccessDenied        = "access denied"
 	ErrMessagingToYourself = "sending a message to yourself"
 	ErrChatWithYourself    = "creating chat with yourself"
+	ErrNotFoundAuthToken   = "authToken not found in transport payload"
+	ErrEmptyDataWithClaims = "empty data with claims"
 )
 
 // http code 500

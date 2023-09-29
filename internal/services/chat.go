@@ -12,10 +12,15 @@ type ChatService interface {
 	CreateChat(user1ID, user2ID uint) (models.ChatCore, error)
 	DeleteChat(chatID, userID uint) (models.ChatCore, error)
 	Chats(userID uint, page, pageSize *int) ([]models.ChatCore, uint, error)
+	GetChatById(chatId uint) (models.ChatCore, error)
 }
 
 type ChatServiceImpl struct {
 	chatGateway gateways.ChatGateway
+}
+
+func (c ChatServiceImpl) GetChatById(chatId uint) (models.ChatCore, error) {
+	return c.chatGateway.ChatByID(chatId)
 }
 
 func (c ChatServiceImpl) CreateChat(user1ID, user2ID uint) (models.ChatCore, error) {

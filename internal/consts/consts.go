@@ -32,3 +32,6 @@ const EmptyProjectJson = "{\"targets\":[{\"isStage\":true,\"name\":\"Stage\",\"v
 	"\":100,\"visible\":true,\"x\":0,\"y\":0,\"size\":100,\"direction\":90,\"draggable\":false,\"rotationStyle\":\"" +
 	"all around\"}],\"meta\":{\"semver\":\"3.0.0\",\"vm\":\"0.1.0\",\"agent\":\"Mozilla/5.0 (Macintosh; Intel Mac O" +
 	"S X 10_13_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36\"}}"
+
+const AuthHeader string = "Authorization"
+const AuthPayload string = "authToken"
