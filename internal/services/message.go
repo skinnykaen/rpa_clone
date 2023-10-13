@@ -13,7 +13,7 @@ import (
 
 type MessageService interface {
 	PostMessage(message models.MessageCore, clientRole models.Role) (models.MessageCore, error)
-	DeleteMessage(id, userID uint) (receiverID uint, err error)
+	DeleteMessages(ids []uint, userId uint) (messages []models.MessageCore, err error)
 	UpdateMessage(id uint, payload string, userID uint) (models.MessageCore, error)
 
 	MessagesFromUser(receiverId, senderId uint, count *int, cursor *string, userID uint) ([]models.MessageCore, int, int, error)
@@ -103,24 +103,30 @@ func (m MessageServiceImpl) PostMessage(message models.MessageCore, clientRole m
 	return m.messageGateway.PostMessage(message)
 }
 
-func (m MessageServiceImpl) DeleteMessage(id, userID uint) (receiverID uint, err error) {
-	message, err := m.messageGateway.GetMessageById(id)
+func (m MessageServiceImpl) DeleteMessages(ids []uint, userID uint) ([]models.MessageCore, error) {
+	messages := make([]models.MessageCore, 0, len(ids))
 
-	if err != nil {
-		return 0, utils.ResponseError{
-			Code:    http.StatusInternalServerError,
-			Message: err.Error(),
+	for _, id := range ids {
+		message, err := m.messageGateway.GetMessageById(id)
+
+		if err != nil {
+			return nil, utils.ResponseError{
+				Code:    http.StatusInternalServerError,
+				Message: err.Error(),
+			}
 		}
+
+		if message.SenderID != userID {
+			return nil, utils.ResponseError{
+				Code:    http.StatusForbidden,
+				Message: consts.ErrAccessDenied,
+			}
+		}
+
+		messages = append(messages, message)
 	}
 
-	if message.SenderID != userID {
-		return 0, utils.ResponseError{
-			Code:    http.StatusForbidden,
-			Message: consts.ErrAccessDenied,
-		}
-	}
-
-	return m.messageGateway.DeleteMessage(id)
+	return messages, m.messageGateway.DeleteMessages(ids)
 }
 
 func (m MessageServiceImpl) UpdateMessage(id uint, payload string, userID uint) (models.MessageCore, error) {

@@ -54,7 +54,7 @@ extend type Query {
 extend type Mutation {
     PostMessage(input:NewMessage!): MessageHttp! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
     UpdateMessage(id:ID!, payload: String!): MessageHttp!
-    DeleteMessage(id:ID!):Response! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
+    DeleteMessages(idList:[ID!]!):Response! @hasRole(roles: [SuperAdmin, UnitAdmin, Teacher, Parent, Student])
 }
 
 extend type Subscription {
