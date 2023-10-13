@@ -20,6 +20,7 @@ type MessageCore struct {
 	Sender     UserCore `gorm:"References:ID"`
 	ReceiverID uint
 	Receiver   UserCore `gorm:"References:ID"`
+	Checked    bool
 }
 
 func (m *MessageHTTP) ToCore() MessageCore {

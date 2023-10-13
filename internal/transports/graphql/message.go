@@ -54,6 +54,7 @@ func (r *mutationResolver) PostMessage(ctx context.Context, input models.NewMess
 		Sender:     models.UserCore{ID: senderID},
 		ReceiverID: uint(receiverID),
 		Receiver:   models.UserCore{ID: uint(receiverID)},
+		Checked:    false,
 	}
 
 	message, err = r.messageService.PostMessage(message, ctx.Value(consts.KeyRole).(models.Role))
@@ -130,7 +131,6 @@ func (r *mutationResolver) UpdateMessage(ctx context.Context, id string, payload
 
 // DeleteMessages is the resolver for the DeleteMessages field.
 func (r *mutationResolver) DeleteMessages(ctx context.Context, idList []string) (*models.Response, error) {
-
 	ids := make([]uint, 0, len(idList))
 
 	for _, id := range idList {

@@ -98,6 +98,7 @@ type MessageHTTP struct {
 	ChatID    string    `json:"chatId"`
 	SentAt    string    `json:"sentAt"`
 	UpdatedAt *string   `json:"updatedAt,omitempty"`
+	Checked   bool      `json:"checked"`
 }
 
 type MessagesFromUserInput struct {
@@ -320,17 +321,19 @@ const (
 	MessageModeCreate MessageMode = "Create"
 	MessageModeDelete MessageMode = "Delete"
 	MessageModeUpdate MessageMode = "Update"
+	MessageModeCheck  MessageMode = "Check"
 )
 
 var AllMessageMode = []MessageMode{
 	MessageModeCreate,
 	MessageModeDelete,
 	MessageModeUpdate,
+	MessageModeCheck,
 }
 
 func (e MessageMode) IsValid() bool {
 	switch e {
-	case MessageModeCreate, MessageModeDelete, MessageModeUpdate:
+	case MessageModeCreate, MessageModeDelete, MessageModeUpdate, MessageModeCheck:
 		return true
 	}
 	return false

@@ -6,6 +6,7 @@ type MessageHttp {
     chatId: ID!
     sentAt: Timestamp!
     updatedAt: Timestamp
+    checked: Boolean!
 }
 
 input MessagesFromUserInput{
@@ -39,6 +40,7 @@ enum MessageMode{
     Create
     Delete
     Update
+    Check
 }
 
 type MessageForSubscription{

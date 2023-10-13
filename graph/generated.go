@@ -139,6 +139,7 @@ type ComplexityRoot struct {
 
 	MessageHttp struct {
 		ChatID    func(childComplexity int) int
+		Checked   func(childComplexity int) int
 		ID        func(childComplexity int) int
 		Payload   func(childComplexity int) int
 		Receiver  func(childComplexity int) int
@@ -775,6 +776,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.MessageHttp.ChatID(childComplexity), true
+
+	case "MessageHttp.checked":
+		if e.complexity.MessageHttp.Checked == nil {
+			break
+		}
+
+		return e.complexity.MessageHttp.Checked(childComplexity), true
 
 	case "MessageHttp.id":
 		if e.complexity.MessageHttp.ID == nil {
@@ -3752,6 +3760,8 @@ func (ec *executionContext) fieldContext_ChatHttp_lastMessage(ctx context.Contex
 				return ec.fieldContext_MessageHttp_sentAt(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_MessageHttp_updatedAt(ctx, field)
+			case "checked":
+				return ec.fieldContext_MessageHttp_checked(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type MessageHttp", field.Name)
 		},
@@ -5622,6 +5632,8 @@ func (ec *executionContext) fieldContext_MessageEdge_node(ctx context.Context, f
 				return ec.fieldContext_MessageHttp_sentAt(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_MessageHttp_updatedAt(ctx, field)
+			case "checked":
+				return ec.fieldContext_MessageHttp_checked(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type MessageHttp", field.Name)
 		},
@@ -5726,6 +5738,8 @@ func (ec *executionContext) fieldContext_MessageForSubscription_messageHttp(ctx 
 				return ec.fieldContext_MessageHttp_sentAt(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_MessageHttp_updatedAt(ctx, field)
+			case "checked":
+				return ec.fieldContext_MessageHttp_checked(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type MessageHttp", field.Name)
 		},
@@ -6129,6 +6143,50 @@ func (ec *executionContext) fieldContext_MessageHttp_updatedAt(ctx context.Conte
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Timestamp does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MessageHttp_checked(ctx context.Context, field graphql.CollectedField, obj *models.MessageHTTP) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_MessageHttp_checked(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Checked, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_MessageHttp_checked(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MessageHttp",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
 		},
 	}
 	return fc, nil
@@ -7086,6 +7144,8 @@ func (ec *executionContext) fieldContext_Mutation_PostMessage(ctx context.Contex
 				return ec.fieldContext_MessageHttp_sentAt(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_MessageHttp_updatedAt(ctx, field)
+			case "checked":
+				return ec.fieldContext_MessageHttp_checked(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type MessageHttp", field.Name)
 		},
@@ -7157,6 +7217,8 @@ func (ec *executionContext) fieldContext_Mutation_UpdateMessage(ctx context.Cont
 				return ec.fieldContext_MessageHttp_sentAt(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_MessageHttp_updatedAt(ctx, field)
+			case "checked":
+				return ec.fieldContext_MessageHttp_checked(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type MessageHttp", field.Name)
 		},
@@ -17230,6 +17292,11 @@ func (ec *executionContext) _MessageHttp(ctx context.Context, sel ast.SelectionS
 			}
 		case "updatedAt":
 			out.Values[i] = ec._MessageHttp_updatedAt(ctx, field, obj)
+		case "checked":
+			out.Values[i] = ec._MessageHttp_checked(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
