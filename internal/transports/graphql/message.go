@@ -183,6 +183,51 @@ func (r *mutationResolver) DeleteMessages(ctx context.Context, idList []string) 
 	return &models.Response{Ok: true}, err
 }
 
+// CheckMessage is the resolver for the CheckMessage field.
+func (r *mutationResolver) CheckMessage(ctx context.Context, id string) (*models.Response, error) {
+
+	mesID, err := strconv.Atoi(id)
+
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return &models.Response{Ok: false}, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": utils.ResponseError{
+					Code:    http.StatusBadRequest,
+					Message: consts.ErrAtoi,
+				},
+			},
+		}
+	}
+
+	messages, err := r.messageService.CheckMessages([]uint{uint(mesID)})
+
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return &models.Response{Ok: false}, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
+	}
+
+	var messageHttp models.MessageHTTP
+	messageHttp.FromCore(messages[0])
+
+	if err := r.messageObservers.NotifyObserver(messages[0].ReceiverID, models.MessageModeDelete, messageHttp); err != nil {
+		if err.Error() != consts.ErrThereIsNoObservers {
+			r.loggers.Err.Printf("%s", err.Error())
+			return &models.Response{Ok: false}, &gqlerror.Error{
+				Extensions: map[string]interface{}{
+					"err": err,
+				},
+			}
+		}
+	}
+
+	return &models.Response{Ok: true}, nil
+}
+
 // MessagesFromUser is the resolver for the MessagesFromUser field.
 func (r *queryResolver) MessagesFromUser(ctx context.Context, input models.MessagesFromUserInput, count *int, cursor *string) (*models.MessageConnection, error) {
 	receiverID, err := strconv.Atoi(input.ReceiverID)

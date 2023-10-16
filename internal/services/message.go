@@ -18,6 +18,8 @@ type MessageService interface {
 
 	MessagesFromUser(receiverId, senderId uint, count *int, cursor *string, userID uint) ([]models.MessageCore, int, int, error)
 	GetMessagesByChatId(chatId uint, count *int, cursor *string) ([]models.MessageCore, int, int, error)
+
+	CheckMessages(ids []uint) ([]models.MessageCore, error)
 }
 
 type GetterUserByID interface {
@@ -215,4 +217,8 @@ func CheckAccessForMessaging(senderRole, receiverRole models.Role) error {
 		Code:    http.StatusForbidden,
 		Message: consts.ErrAccessDenied,
 	}
+}
+
+func (m MessageServiceImpl) CheckMessages(ids []uint) ([]models.MessageCore, error) {
+	return m.messageGateway.CheckMessages(ids)
 }

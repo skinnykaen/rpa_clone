@@ -4,6 +4,7 @@ import (
 	"github.com/skinnykaen/rpa_clone/internal/db"
 	"github.com/skinnykaen/rpa_clone/internal/models"
 	"github.com/skinnykaen/rpa_clone/pkg/utils"
+	"gorm.io/gorm/clause"
 	"net/http"
 )
 
@@ -16,6 +17,8 @@ type MessageGateway interface {
 
 	GetMessageById(messageId uint) (models.MessageCore, error)
 	GetMessagesByChatId(chatId uint) ([]models.MessageCore, error)
+
+	CheckMessages(ids []uint) ([]models.MessageCore, error)
 }
 
 type MessageGatewayImpl struct {
@@ -116,4 +119,19 @@ func (m MessageGatewayImpl) GetMessageById(messageId uint) (models.MessageCore, 
 	}
 
 	return message, nil
+}
+
+func (m MessageGatewayImpl) CheckMessages(ids []uint) ([]models.MessageCore, error) {
+
+	var messages []models.MessageCore
+
+	if err := m.postgresClient.Db.Model(&messages).Clauses(clause.Returning{}).Where("id = ?", ids).
+		Update("checked", true).Error; err != nil {
+		return nil, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
+	}
+
+	return messages, nil
 }
