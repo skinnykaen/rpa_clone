@@ -20,6 +20,7 @@ type MessageCore struct {
 	Sender     UserCore `gorm:"References:ID"`
 	ReceiverID uint
 	Receiver   UserCore `gorm:"References:ID"`
+	Checked    bool
 }
 
 func (m *MessageHTTP) ToCore() MessageCore {
@@ -57,6 +58,8 @@ func (m *MessageHTTP) FromCore(messageCore MessageCore) {
 
 	updatedAt := messageCore.UpdatedAt.Format(time.DateTime)
 	m.UpdatedAt = &updatedAt
+
+	m.Checked = messageCore.Checked
 }
 
 type MessageConnection struct {

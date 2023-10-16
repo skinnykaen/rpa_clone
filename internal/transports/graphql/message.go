@@ -54,6 +54,7 @@ func (r *mutationResolver) PostMessage(ctx context.Context, input models.NewMess
 		Sender:     models.UserCore{ID: senderID},
 		ReceiverID: uint(receiverID),
 		Receiver:   models.UserCore{ID: uint(receiverID)},
+		Checked:    false,
 	}
 
 	message, err = r.messageService.PostMessage(message, ctx.Value(consts.KeyRole).(models.Role))
@@ -128,8 +129,63 @@ func (r *mutationResolver) UpdateMessage(ctx context.Context, id string, payload
 	return &messageHttp, nil
 }
 
-// DeleteMessage is the resolver for the DeleteMessage field.
-func (r *mutationResolver) DeleteMessage(ctx context.Context, id string) (*models.Response, error) {
+// DeleteMessages is the resolver for the DeleteMessages field.
+func (r *mutationResolver) DeleteMessages(ctx context.Context, idList []string) (*models.Response, error) {
+	ids := make([]uint, 0, len(idList))
+
+	for _, id := range idList {
+
+		mesID, err := strconv.Atoi(id)
+
+		if err != nil {
+			r.loggers.Err.Printf("%s", err.Error())
+			return &models.Response{Ok: false}, &gqlerror.Error{
+				Extensions: map[string]interface{}{
+					"err": utils.ResponseError{
+						Code:    http.StatusBadRequest,
+						Message: consts.ErrAtoi,
+					},
+				},
+			}
+		}
+
+		ids = append(ids, uint(mesID))
+	}
+
+	messages, err := r.messageService.DeleteMessages(ids, ctx.Value(consts.KeyId).(uint))
+
+	if err != nil {
+		r.loggers.Err.Printf("%s", err.Error())
+		return &models.Response{Ok: false}, &gqlerror.Error{
+			Extensions: map[string]interface{}{
+				"err": err,
+			},
+		}
+	}
+
+	for _, message := range messages {
+
+		var messageHttp models.MessageHTTP
+		messageHttp.FromCore(message)
+
+		if err := r.messageObservers.NotifyObserver(message.ReceiverID, models.MessageModeDelete, messageHttp); err != nil {
+			if err.Error() != consts.ErrThereIsNoObservers {
+				r.loggers.Err.Printf("%s", err.Error())
+				return &models.Response{Ok: false}, &gqlerror.Error{
+					Extensions: map[string]interface{}{
+						"err": err,
+					},
+				}
+			}
+		}
+	}
+
+	return &models.Response{Ok: true}, err
+}
+
+// CheckMessage is the resolver for the CheckMessage field.
+func (r *mutationResolver) CheckMessage(ctx context.Context, id string) (*models.Response, error) {
+
 	mesID, err := strconv.Atoi(id)
 
 	if err != nil {
@@ -144,29 +200,24 @@ func (r *mutationResolver) DeleteMessage(ctx context.Context, id string) (*model
 		}
 	}
 
-	receiverID, err := r.messageService.DeleteMessage(uint(mesID), ctx.Value(consts.KeyId).(uint))
+	messages, err := r.messageService.CheckMessages([]uint{uint(mesID)})
 
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
-		return nil, &gqlerror.Error{
+		return &models.Response{Ok: false}, &gqlerror.Error{
 			Extensions: map[string]interface{}{
 				"err": err,
 			},
 		}
 	}
 
-	if err := r.messageObservers.NotifyObserver(receiverID, models.MessageModeDelete,
-		models.MessageHTTP{
-			ID:       id,
-			Payload:  "",
-			ChatID:   "0",
-			SentAt:   "",
-			Sender:   &models.UserHTTP{ID: strconv.Itoa(int(ctx.Value(consts.KeyId).(uint)))},
-			Receiver: &models.UserHTTP{ID: strconv.Itoa(int(receiverID))},
-		}); err != nil {
+	var messageHttp models.MessageHTTP
+	messageHttp.FromCore(messages[0])
+
+	if err := r.messageObservers.NotifyObserver(messages[0].ReceiverID, models.MessageModeDelete, messageHttp); err != nil {
 		if err.Error() != consts.ErrThereIsNoObservers {
 			r.loggers.Err.Printf("%s", err.Error())
-			return nil, &gqlerror.Error{
+			return &models.Response{Ok: false}, &gqlerror.Error{
 				Extensions: map[string]interface{}{
 					"err": err,
 				},
@@ -174,7 +225,7 @@ func (r *mutationResolver) DeleteMessage(ctx context.Context, id string) (*model
 		}
 	}
 
-	return &models.Response{Ok: true}, err
+	return &models.Response{Ok: true}, nil
 }
 
 // MessagesFromUser is the resolver for the MessagesFromUser field.
@@ -244,7 +295,9 @@ func (r *queryResolver) GetMessagesByChatID(ctx context.Context, chatID string, 
 		}
 	}
 
-	messagesCore, from, to, err := r.messageService.GetMessagesByChatId(uint(atoi), count, cursor)
+	userId := ctx.Value(consts.KeyId).(uint)
+
+	messagesCore, from, to, err := r.messageService.GetMessagesByChatId(userId, uint(atoi), count, cursor)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{
@@ -255,6 +308,26 @@ func (r *queryResolver) GetMessagesByChatID(ctx context.Context, chatID string, 
 	}
 
 	messagesHttp := models.FromMessagesCore(messagesCore)
+
+	for i := from; i < to; i++ {
+		// Notify only about unchecked messages
+		if !messagesCore[i].Checked && messagesCore[i].ReceiverID == userId {
+
+			messagesHttp[i].Checked = true
+
+			if err := r.messageObservers.NotifyObserver(messagesCore[i].ReceiverID, models.MessageModeCheck, *messagesHttp[i]); err != nil {
+				if err.Error() != consts.ErrThereIsNoObservers {
+					r.loggers.Err.Printf("%s", err.Error())
+					return nil, &gqlerror.Error{
+						Extensions: map[string]interface{}{
+							"err": err,
+						},
+					}
+				}
+			}
+		}
+
+	}
 
 	return &models.MessageConnection{
 		Messages: messagesHttp,

@@ -139,6 +139,7 @@ type ComplexityRoot struct {
 
 	MessageHttp struct {
 		ChatID    func(childComplexity int) int
+		Checked   func(childComplexity int) int
 		ID        func(childComplexity int) int
 		Payload   func(childComplexity int) int
 		Receiver  func(childComplexity int) int
@@ -148,6 +149,7 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
+		CheckMessage        func(childComplexity int, id string) int
 		ConfirmActivation   func(childComplexity int, activationLink string) int
 		CreateChat          func(childComplexity int, userID string) int
 		CreateParentRel     func(childComplexity int, coreRelID string, targetRelID string) int
@@ -158,7 +160,7 @@ type ComplexityRoot struct {
 		CreateRobboUnitRel  func(childComplexity int, coreRelID string, targetRelID string) int
 		CreateUser          func(childComplexity int, input models.NewUser) int
 		DeleteChat          func(childComplexity int, chatID string) int
-		DeleteMessage       func(childComplexity int, id string) int
+		DeleteMessages      func(childComplexity int, idList []string) int
 		DeleteParentRel     func(childComplexity int, parentID string, childID string) int
 		DeleteProjectPage   func(childComplexity int, id string) int
 		DeleteRobboGroup    func(childComplexity int, id string) int
@@ -336,7 +338,8 @@ type MutationResolver interface {
 	DeleteChat(ctx context.Context, chatID string) (*models.Response, error)
 	PostMessage(ctx context.Context, input models.NewMessage) (*models.MessageHTTP, error)
 	UpdateMessage(ctx context.Context, id string, payload string) (*models.MessageHTTP, error)
-	DeleteMessage(ctx context.Context, id string) (*models.Response, error)
+	DeleteMessages(ctx context.Context, idList []string) (*models.Response, error)
+	CheckMessage(ctx context.Context, id string) (*models.Response, error)
 	CreateParentRel(ctx context.Context, coreRelID string, targetRelID string) (*models.Response, error)
 	DeleteParentRel(ctx context.Context, parentID string, childID string) (*models.Response, error)
 	CreateProjectPage(ctx context.Context) (*models.ProjectPageHTTP, error)
@@ -776,6 +779,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.MessageHttp.ChatID(childComplexity), true
 
+	case "MessageHttp.checked":
+		if e.complexity.MessageHttp.Checked == nil {
+			break
+		}
+
+		return e.complexity.MessageHttp.Checked(childComplexity), true
+
 	case "MessageHttp.id":
 		if e.complexity.MessageHttp.ID == nil {
 			break
@@ -817,6 +827,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.MessageHttp.UpdatedAt(childComplexity), true
+
+	case "Mutation.CheckMessage":
+		if e.complexity.Mutation.CheckMessage == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_CheckMessage_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CheckMessage(childComplexity, args["id"].(string)), true
 
 	case "Mutation.ConfirmActivation":
 		if e.complexity.Mutation.ConfirmActivation == nil {
@@ -933,17 +955,17 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.DeleteChat(childComplexity, args["chatId"].(string)), true
 
-	case "Mutation.DeleteMessage":
-		if e.complexity.Mutation.DeleteMessage == nil {
+	case "Mutation.DeleteMessages":
+		if e.complexity.Mutation.DeleteMessages == nil {
 			break
 		}
 
-		args, err := ec.field_Mutation_DeleteMessage_args(context.TODO(), rawArgs)
+		args, err := ec.field_Mutation_DeleteMessages_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Mutation.DeleteMessage(childComplexity, args["id"].(string)), true
+		return e.complexity.Mutation.DeleteMessages(childComplexity, args["idList"].([]string)), true
 
 	case "Mutation.DeleteParentRel":
 		if e.complexity.Mutation.DeleteParentRel == nil {
@@ -2116,6 +2138,21 @@ func (ec *executionContext) dir_hasRole_args(ctx context.Context, rawArgs map[st
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_CheckMessage_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_ConfirmActivation_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -2278,18 +2315,18 @@ func (ec *executionContext) field_Mutation_DeleteChat_args(ctx context.Context, 
 	return args, nil
 }
 
-func (ec *executionContext) field_Mutation_DeleteMessage_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Mutation_DeleteMessages_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 string
-	if tmp, ok := rawArgs["id"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+	var arg0 []string
+	if tmp, ok := rawArgs["idList"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("idList"))
+		arg0, err = ec.unmarshalNID2ᚕstringᚄ(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["id"] = arg0
+	args["idList"] = arg0
 	return args, nil
 }
 
@@ -3752,6 +3789,8 @@ func (ec *executionContext) fieldContext_ChatHttp_lastMessage(ctx context.Contex
 				return ec.fieldContext_MessageHttp_sentAt(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_MessageHttp_updatedAt(ctx, field)
+			case "checked":
+				return ec.fieldContext_MessageHttp_checked(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type MessageHttp", field.Name)
 		},
@@ -5622,6 +5661,8 @@ func (ec *executionContext) fieldContext_MessageEdge_node(ctx context.Context, f
 				return ec.fieldContext_MessageHttp_sentAt(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_MessageHttp_updatedAt(ctx, field)
+			case "checked":
+				return ec.fieldContext_MessageHttp_checked(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type MessageHttp", field.Name)
 		},
@@ -5726,6 +5767,8 @@ func (ec *executionContext) fieldContext_MessageForSubscription_messageHttp(ctx 
 				return ec.fieldContext_MessageHttp_sentAt(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_MessageHttp_updatedAt(ctx, field)
+			case "checked":
+				return ec.fieldContext_MessageHttp_checked(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type MessageHttp", field.Name)
 		},
@@ -6129,6 +6172,50 @@ func (ec *executionContext) fieldContext_MessageHttp_updatedAt(ctx context.Conte
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Timestamp does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MessageHttp_checked(ctx context.Context, field graphql.CollectedField, obj *models.MessageHTTP) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_MessageHttp_checked(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Checked, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_MessageHttp_checked(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MessageHttp",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
 		},
 	}
 	return fc, nil
@@ -7086,6 +7173,8 @@ func (ec *executionContext) fieldContext_Mutation_PostMessage(ctx context.Contex
 				return ec.fieldContext_MessageHttp_sentAt(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_MessageHttp_updatedAt(ctx, field)
+			case "checked":
+				return ec.fieldContext_MessageHttp_checked(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type MessageHttp", field.Name)
 		},
@@ -7117,8 +7206,32 @@ func (ec *executionContext) _Mutation_UpdateMessage(ctx context.Context, field g
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdateMessage(rctx, fc.Args["id"].(string), fc.Args["payload"].(string))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().UpdateMessage(rctx, fc.Args["id"].(string), fc.Args["payload"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "UnitAdmin", "Teacher", "Parent", "Student"})
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.HasRole == nil {
+				return nil, errors.New("directive hasRole is not implemented")
+			}
+			return ec.directives.HasRole(ctx, nil, directive0, roles)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*models.MessageHTTP); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/skinnykaen/rpa_clone/internal/models.MessageHTTP`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -7157,6 +7270,8 @@ func (ec *executionContext) fieldContext_Mutation_UpdateMessage(ctx context.Cont
 				return ec.fieldContext_MessageHttp_sentAt(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_MessageHttp_updatedAt(ctx, field)
+			case "checked":
+				return ec.fieldContext_MessageHttp_checked(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type MessageHttp", field.Name)
 		},
@@ -7175,8 +7290,8 @@ func (ec *executionContext) fieldContext_Mutation_UpdateMessage(ctx context.Cont
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_DeleteMessage(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_DeleteMessage(ctx, field)
+func (ec *executionContext) _Mutation_DeleteMessages(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_DeleteMessages(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -7190,7 +7305,7 @@ func (ec *executionContext) _Mutation_DeleteMessage(ctx context.Context, field g
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Mutation().DeleteMessage(rctx, fc.Args["id"].(string))
+			return ec.resolvers.Mutation().DeleteMessages(rctx, fc.Args["idList"].([]string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "UnitAdmin", "Teacher", "Parent", "Student"})
@@ -7230,7 +7345,7 @@ func (ec *executionContext) _Mutation_DeleteMessage(ctx context.Context, field g
 	return ec.marshalNResponse2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐResponse(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Mutation_DeleteMessage(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_DeleteMessages(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Mutation",
 		Field:      field,
@@ -7251,7 +7366,90 @@ func (ec *executionContext) fieldContext_Mutation_DeleteMessage(ctx context.Cont
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_DeleteMessage_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_DeleteMessages_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_CheckMessage(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_CheckMessage(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().CheckMessage(rctx, fc.Args["id"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			roles, err := ec.unmarshalORole2ᚕᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐRole(ctx, []interface{}{"SuperAdmin", "UnitAdmin", "Teacher", "Parent", "Student"})
+			if err != nil {
+				return nil, err
+			}
+			if ec.directives.HasRole == nil {
+				return nil, errors.New("directive hasRole is not implemented")
+			}
+			return ec.directives.HasRole(ctx, nil, directive0, roles)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*models.Response); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/skinnykaen/rpa_clone/internal/models.Response`, tmp)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.Response)
+	fc.Result = res
+	return ec.marshalNResponse2ᚖgithubᚗcomᚋskinnykaenᚋrpa_cloneᚋinternalᚋmodelsᚐResponse(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_CheckMessage(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "ok":
+				return ec.fieldContext_Response_ok(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Response", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_CheckMessage_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -10565,6 +10763,8 @@ func (ec *executionContext) fieldContext_Query_GetChatById(ctx context.Context, 
 				return ec.fieldContext_ChatHttp_user1(ctx, field)
 			case "user2":
 				return ec.fieldContext_ChatHttp_user2(ctx, field)
+			case "lastMessage":
+				return ec.fieldContext_ChatHttp_lastMessage(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ChatHttp", field.Name)
 		},
@@ -17228,6 +17428,11 @@ func (ec *executionContext) _MessageHttp(ctx context.Context, sel ast.SelectionS
 			}
 		case "updatedAt":
 			out.Values[i] = ec._MessageHttp_updatedAt(ctx, field, obj)
+		case "checked":
+			out.Values[i] = ec._MessageHttp_checked(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -17361,9 +17566,16 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "DeleteMessage":
+		case "DeleteMessages":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_DeleteMessage(ctx, field)
+				return ec._Mutation_DeleteMessages(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "CheckMessage":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_CheckMessage(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -19495,6 +19707,38 @@ func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.Selec
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNID2ᚕstringᚄ(ctx context.Context, v interface{}) ([]string, error) {
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNID2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNID2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNID2string(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalNInt2int(ctx context.Context, v interface{}) (int, error) {

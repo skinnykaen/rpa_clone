@@ -13,11 +13,13 @@ import (
 
 type MessageService interface {
 	PostMessage(message models.MessageCore, clientRole models.Role) (models.MessageCore, error)
-	DeleteMessage(id, userID uint) (receiverID uint, err error)
+	DeleteMessages(ids []uint, userId uint) (messages []models.MessageCore, err error)
 	UpdateMessage(id uint, payload string, userID uint) (models.MessageCore, error)
 
 	MessagesFromUser(receiverId, senderId uint, count *int, cursor *string, userID uint) ([]models.MessageCore, int, int, error)
-	GetMessagesByChatId(chatId uint, count *int, cursor *string) ([]models.MessageCore, int, int, error)
+	GetMessagesByChatId(userId, chatId uint, count *int, cursor *string) ([]models.MessageCore, int, int, error)
+
+	CheckMessages(ids []uint) ([]models.MessageCore, error)
 }
 
 type GetterUserByID interface {
@@ -34,7 +36,7 @@ type MessageServiceImpl struct {
 	getterChat     ChatCreator
 }
 
-func (m MessageServiceImpl) GetMessagesByChatId(chatId uint, count *int, cursor *string) ([]models.MessageCore, int, int, error) {
+func (m MessageServiceImpl) GetMessagesByChatId(userId, chatId uint, count *int, cursor *string) ([]models.MessageCore, int, int, error) {
 	from := 0
 
 	if cursor != nil {
@@ -65,6 +67,19 @@ func (m MessageServiceImpl) GetMessagesByChatId(chatId uint, count *int, cursor 
 		if to > len(messages) {
 			to = len(messages)
 		}
+	}
+
+	// Update messages checked
+	var ids []uint
+	for i := from; i < to; i++ {
+		if messages[i].ReceiverID == userId {
+			ids = append(ids, messages[i].ID)
+		}
+	}
+
+	_, err = m.messageGateway.CheckMessages(ids)
+	if err != nil {
+		return nil, 0, 0, err
 	}
 
 	return messages, from, to, nil
@@ -103,24 +118,30 @@ func (m MessageServiceImpl) PostMessage(message models.MessageCore, clientRole m
 	return m.messageGateway.PostMessage(message)
 }
 
-func (m MessageServiceImpl) DeleteMessage(id, userID uint) (receiverID uint, err error) {
-	message, err := m.messageGateway.GetMessageById(id)
+func (m MessageServiceImpl) DeleteMessages(ids []uint, userID uint) ([]models.MessageCore, error) {
+	messages := make([]models.MessageCore, 0, len(ids))
 
-	if err != nil {
-		return 0, utils.ResponseError{
-			Code:    http.StatusInternalServerError,
-			Message: err.Error(),
+	for _, id := range ids {
+		message, err := m.messageGateway.GetMessageById(id)
+
+		if err != nil {
+			return nil, utils.ResponseError{
+				Code:    http.StatusInternalServerError,
+				Message: err.Error(),
+			}
 		}
+
+		if message.SenderID != userID {
+			return nil, utils.ResponseError{
+				Code:    http.StatusForbidden,
+				Message: consts.ErrAccessDenied,
+			}
+		}
+
+		messages = append(messages, message)
 	}
 
-	if message.SenderID != userID {
-		return 0, utils.ResponseError{
-			Code:    http.StatusForbidden,
-			Message: consts.ErrAccessDenied,
-		}
-	}
-
-	return m.messageGateway.DeleteMessage(id)
+	return messages, m.messageGateway.DeleteMessages(ids)
 }
 
 func (m MessageServiceImpl) UpdateMessage(id uint, payload string, userID uint) (models.MessageCore, error) {
@@ -209,4 +230,8 @@ func CheckAccessForMessaging(senderRole, receiverRole models.Role) error {
 		Code:    http.StatusForbidden,
 		Message: consts.ErrAccessDenied,
 	}
+}
+
+func (m MessageServiceImpl) CheckMessages(ids []uint) ([]models.MessageCore, error) {
+	return m.messageGateway.CheckMessages(ids)
 }

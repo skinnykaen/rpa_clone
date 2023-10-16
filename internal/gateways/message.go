@@ -10,13 +10,15 @@ import (
 
 type MessageGateway interface {
 	PostMessage(message models.MessageCore) (models.MessageCore, error)
-	DeleteMessage(id uint) (receiverID uint, err error)
+	DeleteMessages(ids []uint) (err error)
 	UpdateMessage(id uint, payload string) (models.MessageCore, error)
 
 	MessagesFromUser(receiverId, senderId uint) ([]models.MessageCore, error)
 
 	GetMessageById(messageId uint) (models.MessageCore, error)
 	GetMessagesByChatId(chatId uint) ([]models.MessageCore, error)
+
+	CheckMessages(ids []uint) ([]models.MessageCore, error)
 }
 
 type MessageGatewayImpl struct {
@@ -55,19 +57,16 @@ func (m MessageGatewayImpl) PostMessage(message models.MessageCore) (models.Mess
 
 }
 
-func (m MessageGatewayImpl) DeleteMessage(id uint) (receiverID uint, err error) {
+func (m MessageGatewayImpl) DeleteMessages(ids []uint) (err error) {
 
-	var mes models.MessageCore
-
-	if err := m.postgresClient.Db.Clauses(clause.Returning{Columns: []clause.Column{{Name: "receiver_id"}}}).
-		Delete(&mes, id).Error; err != nil {
-		return 0, utils.ResponseError{
+	if err := m.postgresClient.Db.Delete(&models.MessageCore{}, ids).Error; err != nil {
+		return utils.ResponseError{
 			Code:    http.StatusInternalServerError,
 			Message: err.Error(),
 		}
 	}
 
-	return mes.ReceiverID, nil
+	return nil
 }
 
 func (m MessageGatewayImpl) UpdateMessage(id uint, payload string) (models.MessageCore, error) {
@@ -120,4 +119,23 @@ func (m MessageGatewayImpl) GetMessageById(messageId uint) (models.MessageCore, 
 	}
 
 	return message, nil
+}
+
+func (m MessageGatewayImpl) CheckMessages(ids []uint) ([]models.MessageCore, error) {
+
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	messages := make([]models.MessageCore, 0, len(ids))
+
+	if err := m.postgresClient.Db.Model(&messages).Clauses(clause.Returning{}).Where("id IN ?", ids).
+		Update("checked", true).Error; err != nil {
+		return nil, utils.ResponseError{
+			Code:    http.StatusInternalServerError,
+			Message: err.Error(),
+		}
+	}
+
+	return messages, nil
 }
