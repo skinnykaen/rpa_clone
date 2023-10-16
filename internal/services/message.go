@@ -17,7 +17,7 @@ type MessageService interface {
 	UpdateMessage(id uint, payload string, userID uint) (models.MessageCore, error)
 
 	MessagesFromUser(receiverId, senderId uint, count *int, cursor *string, userID uint) ([]models.MessageCore, int, int, error)
-	GetMessagesByChatId(chatId uint, count *int, cursor *string) ([]models.MessageCore, int, int, error)
+	GetMessagesByChatId(userId, chatId uint, count *int, cursor *string) ([]models.MessageCore, int, int, error)
 
 	CheckMessages(ids []uint) ([]models.MessageCore, error)
 }
@@ -36,7 +36,7 @@ type MessageServiceImpl struct {
 	getterChat     ChatCreator
 }
 
-func (m MessageServiceImpl) GetMessagesByChatId(chatId uint, count *int, cursor *string) ([]models.MessageCore, int, int, error) {
+func (m MessageServiceImpl) GetMessagesByChatId(userId, chatId uint, count *int, cursor *string) ([]models.MessageCore, int, int, error) {
 	from := 0
 
 	if cursor != nil {
@@ -67,6 +67,19 @@ func (m MessageServiceImpl) GetMessagesByChatId(chatId uint, count *int, cursor 
 		if to > len(messages) {
 			to = len(messages)
 		}
+	}
+
+	// Update messages checked
+	var ids []uint
+	for i := from; i < to; i++ {
+		if messages[i].ReceiverID == userId {
+			ids = append(ids, messages[i].ID)
+		}
+	}
+
+	_, err = m.messageGateway.CheckMessages(ids)
+	if err != nil {
+		return nil, 0, 0, err
 	}
 
 	return messages, from, to, nil

@@ -295,7 +295,9 @@ func (r *queryResolver) GetMessagesByChatID(ctx context.Context, chatID string, 
 		}
 	}
 
-	messagesCore, from, to, err := r.messageService.GetMessagesByChatId(uint(atoi), count, cursor)
+	userId := ctx.Value(consts.KeyId).(uint)
+
+	messagesCore, from, to, err := r.messageService.GetMessagesByChatId(userId, uint(atoi), count, cursor)
 	if err != nil {
 		r.loggers.Err.Printf("%s", err.Error())
 		return nil, &gqlerror.Error{
@@ -306,6 +308,26 @@ func (r *queryResolver) GetMessagesByChatID(ctx context.Context, chatID string, 
 	}
 
 	messagesHttp := models.FromMessagesCore(messagesCore)
+
+	for i := from; i < to; i++ {
+		// Notify only about unchecked messages
+		if !messagesCore[i].Checked && messagesCore[i].ReceiverID == userId {
+
+			messagesHttp[i].Checked = true
+
+			if err := r.messageObservers.NotifyObserver(messagesCore[i].ReceiverID, models.MessageModeCheck, *messagesHttp[i]); err != nil {
+				if err.Error() != consts.ErrThereIsNoObservers {
+					r.loggers.Err.Printf("%s", err.Error())
+					return nil, &gqlerror.Error{
+						Extensions: map[string]interface{}{
+							"err": err,
+						},
+					}
+				}
+			}
+		}
+
+	}
 
 	return &models.MessageConnection{
 		Messages: messagesHttp,

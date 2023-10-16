@@ -123,9 +123,13 @@ func (m MessageGatewayImpl) GetMessageById(messageId uint) (models.MessageCore, 
 
 func (m MessageGatewayImpl) CheckMessages(ids []uint) ([]models.MessageCore, error) {
 
-	var messages []models.MessageCore
+	if len(ids) == 0 {
+		return nil, nil
+	}
 
-	if err := m.postgresClient.Db.Model(&messages).Clauses(clause.Returning{}).Where("id = ?", ids).
+	messages := make([]models.MessageCore, 0, len(ids))
+
+	if err := m.postgresClient.Db.Model(&messages).Clauses(clause.Returning{}).Where("id IN ?", ids).
 		Update("checked", true).Error; err != nil {
 		return nil, utils.ResponseError{
 			Code:    http.StatusInternalServerError,

@@ -20,6 +20,7 @@ func NewMessageObserver(channel chan *models.MessageForSubscription) *MessageObs
 			models.MessageModeCreate: false,
 			models.MessageModeDelete: false,
 			models.MessageModeUpdate: false,
+			models.MessageModeCheck:  false,
 		},
 	}
 }

@@ -58,6 +58,8 @@ func (m *MessageHTTP) FromCore(messageCore MessageCore) {
 
 	updatedAt := messageCore.UpdatedAt.Format(time.DateTime)
 	m.UpdatedAt = &updatedAt
+
+	m.Checked = messageCore.Checked
 }
 
 type MessageConnection struct {
